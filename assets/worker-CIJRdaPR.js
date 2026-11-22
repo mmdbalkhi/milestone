@@ -1,0 +1,2 @@
+(function(){importScripts(`/bridge_js.js`),self.addEventListener(`message`,e=>{let{id:t,dslSource:n}=e.data;try{let e=globalThis;if(!e.Milestone)throw Error(`OCaml bridge not loaded. Ensure bridge_js.js is in web/public/ and accessible at /bridge_js.js`);let r=e.Milestone.solve_from(n),i=JSON.parse(r);self.postMessage({id:t,result:i})}catch(e){self.postMessage({id:t,error:{message:e instanceof Error?e.message:String(e)}})}})})();
+//# sourceMappingURL=worker-CIJRdaPR.js.map

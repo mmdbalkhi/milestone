@@ -1,0 +1,1832 @@
+<html lang="en" lang="en">
+  <head>
+    <!-- 2026-11-22 Sun 17:06 -->
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Milestone; Backward DP</title>
+    <meta name="author" content="Komeil Parseh" />
+    <meta name="generator" content="Org Mode" />
+    <link
+      href="https://fonts.googleapis.com/css?family=IBM+Plex+Mono"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=IBM+Plex+Serif"
+      rel="stylesheet"
+    />
+    <style type="text/css">
+      @charset "UTF-8";
+
+      /* Import ET Book styles
+   adapted from https://github.com/edwardtufte/et-book/blob/gh-pages/et-book.css */
+
+      @font-face {
+        font-family: "et-book";
+        src: url("et-book/et-book-roman-line-figures/et-book-roman-line-figures.eot");
+        src:
+          url("et-book/et-book-roman-line-figures/et-book-roman-line-figures.eot?#iefix")
+            format("embedded-opentype"),
+          url("et-book/et-book-roman-line-figures/et-book-roman-line-figures.woff")
+            format("woff"),
+          url("et-book/et-book-roman-line-figures/et-book-roman-line-figures.ttf")
+            format("truetype"),
+          url("et-book/et-book-roman-line-figures/et-book-roman-line-figures.svg#etbookromanosf")
+            format("svg");
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "et-book";
+        src: url("et-book/et-book-display-italic-old-style-figures/et-book-display-italic-old-style-figures.eot");
+        src:
+          url("et-book/et-book-display-italic-old-style-figures/et-book-display-italic-old-style-figures.eot?#iefix")
+            format("embedded-opentype"),
+          url("et-book/et-book-display-italic-old-style-figures/et-book-display-italic-old-style-figures.woff")
+            format("woff"),
+          url("et-book/et-book-display-italic-old-style-figures/et-book-display-italic-old-style-figures.ttf")
+            format("truetype"),
+          url("et-book/et-book-display-italic-old-style-figures/et-book-display-italic-old-style-figures.svg#etbookromanosf")
+            format("svg");
+        font-weight: normal;
+        font-style: italic;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "et-book";
+        src: url("et-book/et-book-bold-line-figures/et-book-bold-line-figures.eot");
+        src:
+          url("et-book/et-book-bold-line-figures/et-book-bold-line-figures.eot?#iefix")
+            format("embedded-opentype"),
+          url("et-book/et-book-bold-line-figures/et-book-bold-line-figures.woff")
+            format("woff"),
+          url("et-book/et-book-bold-line-figures/et-book-bold-line-figures.ttf")
+            format("truetype"),
+          url("et-book/et-book-bold-line-figures/et-book-bold-line-figures.svg#etbookromanosf")
+            format("svg");
+        font-weight: bold;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "et-book-roman-old-style";
+        src: url("et-book/et-book-roman-old-style-figures/et-book-roman-old-style-figures.eot");
+        src:
+          url("et-book/et-book-roman-old-style-figures/et-book-roman-old-style-figures.eot?#iefix")
+            format("embedded-opentype"),
+          url("et-book/et-book-roman-old-style-figures/et-book-roman-old-style-figures.woff")
+            format("woff"),
+          url("et-book/et-book-roman-old-style-figures/et-book-roman-old-style-figures.ttf")
+            format("truetype"),
+          url("et-book/et-book-roman-old-style-figures/et-book-roman-old-style-figures.svg#etbookromanosf")
+            format("svg");
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      /* Tufte CSS styles */
+      html {
+        font-size: 15px;
+      }
+
+      body {
+        width: 87.5%;
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 12.5%;
+        font-family:
+          et-book, Palatino, "Palatino Linotype", "Palatino LT STD",
+          "Book Antiqua", Georgia, serif;
+        background-color: #fffff8;
+        color: #111;
+        max-width: 1400px;
+        counter-reset: sidenote-counter;
+      }
+
+      /* Adds dark mode */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #151515;
+          color: #ddd;
+        }
+      }
+
+      h1 {
+        font-weight: 400;
+        margin-top: 4rem;
+        margin-bottom: 1.5rem;
+        font-size: 3.2rem;
+        line-height: 1;
+      }
+
+      h2 {
+        font-style: italic;
+        font-weight: 400;
+        margin-top: 2.1rem;
+        margin-bottom: 1.4rem;
+        font-size: 2.2rem;
+        line-height: 1;
+      }
+
+      h3 {
+        font-style: italic;
+        font-weight: 400;
+        font-size: 1.7rem;
+        margin-top: 2rem;
+        margin-bottom: 1.4rem;
+        line-height: 1;
+      }
+
+      hr {
+        display: block;
+        height: 1px;
+        width: 55%;
+        border: 0;
+        border-top: 1px solid #ccc;
+        margin: 1em 0;
+        padding: 0;
+      }
+
+      p.subtitle {
+        font-style: italic;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        font-size: 1.8rem;
+        display: block;
+        line-height: 1;
+      }
+
+      .numeral {
+        font-family: et-book-roman-old-style;
+      }
+
+      .danger {
+        color: red;
+      }
+
+      article {
+        padding: 5rem 0rem;
+      }
+
+      section {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+      }
+
+      p,
+      dl,
+      ol,
+      ul {
+        font-size: 1.4rem;
+        line-height: 2rem;
+      }
+
+      p {
+        margin-top: 1.4rem;
+        margin-bottom: 1.4rem;
+        padding-right: 0;
+        vertical-align: baseline;
+      }
+
+      sup {
+        line-height: 0;
+      }
+
+      /* Chapter Epigraphs */
+      div.epigraph {
+        margin: 5em 0;
+      }
+
+      div.epigraph > blockquote {
+        margin-top: 3em;
+        margin-bottom: 3em;
+      }
+
+      div.epigraph > blockquote,
+      div.epigraph > blockquote > p {
+        font-style: italic;
+      }
+
+      div.epigraph > blockquote > footer {
+        font-style: normal;
+      }
+
+      div.epigraph > blockquote > footer > cite {
+        font-style: italic;
+      }
+      /* end chapter epigraphs styles */
+
+      blockquote {
+        font-size: 1.4rem;
+      }
+
+      blockquote p {
+        width: 55%;
+        margin-right: 40px;
+      }
+
+      blockquote footer {
+        width: 55%;
+        font-size: 1.1rem;
+        text-align: right;
+      }
+
+      section > p,
+      section > footer,
+      section > table {
+        width: 55%;
+      }
+
+      /* 50 + 5 == 55, to be the same width as paragraph */
+      section > dl,
+      section > ol,
+      section > ul {
+        width: 50%;
+        -webkit-padding-start: 5%;
+      }
+
+      dt:not(:first-child),
+      li:not(:first-child) {
+        margin-top: 0.25rem;
+      }
+
+      figure {
+        padding: 0;
+        border: 0;
+        font-size: 100%;
+        font: inherit;
+        vertical-align: baseline;
+        max-width: 55%;
+        -webkit-margin-start: 0;
+        -webkit-margin-end: 0;
+        margin: 0 0 3em 0;
+      }
+
+      figcaption {
+        float: right;
+        clear: right;
+        margin-top: 0;
+        margin-bottom: 0;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        vertical-align: baseline;
+        position: relative;
+        max-width: 40%;
+      }
+
+      figure.fullwidth figcaption {
+        margin-right: 24%;
+      }
+
+      a:link,
+      a:visited {
+        color: inherit;
+        text-underline-offset: 0.1em;
+        text-decoration-thickness: 0.05em;
+      }
+
+      /* Sidenotes, margin notes, figures, captions */
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+
+      figure.fullwidth img {
+        width: 100%;
+      }
+
+      .sidenote,
+      .marginnote {
+        float: right;
+        clear: right;
+        margin-right: -60%;
+        width: 50%;
+        margin-top: 0.3rem;
+        margin-bottom: 0;
+        font-size: 1.1rem;
+        line-height: 1.3;
+        vertical-align: baseline;
+        position: relative;
+      }
+
+      .sidenote-number {
+        counter-increment: sidenote-counter;
+      }
+
+      .sidenote-number:after,
+      .sidenote:before {
+        font-family: et-book-roman-old-style;
+        position: relative;
+        vertical-align: baseline;
+      }
+
+      .sidenote-number:after {
+        content: counter(sidenote-counter);
+        font-size: 1rem;
+        top: -0.5rem;
+        left: 0.1rem;
+      }
+
+      .sidenote:before {
+        content: counter(sidenote-counter) " ";
+        font-size: 1rem;
+        top: -0.5rem;
+      }
+
+      blockquote .sidenote,
+      blockquote .marginnote {
+        margin-right: -82%;
+        min-width: 59%;
+        text-align: left;
+      }
+
+      div.fullwidth,
+      table.fullwidth {
+        width: 100%;
+      }
+
+      div.table-wrapper {
+        overflow-x: auto;
+        font-family: "Trebuchet MS", "Gill Sans", "Gill Sans MT", sans-serif;
+      }
+
+      .sans {
+        font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
+        letter-spacing: 0.03em;
+      }
+
+      code,
+      pre > code {
+        font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        font-size: 1rem;
+        line-height: 1.42;
+        -webkit-text-size-adjust: 100%; /* Prevent adjustments of font size after orientation changes in iOS. See https://github.com/edwardtufte/tufte-css/issues/81#issuecomment-261953409 */
+      }
+
+      .sans > code {
+        font-size: 1.2rem;
+      }
+
+      h1 > code,
+      h2 > code,
+      h3 > code {
+        font-size: 0.8em;
+      }
+
+      .marginnote > code,
+      .sidenote > code {
+        font-size: 1rem;
+      }
+
+      pre > code {
+        font-size: 0.9rem;
+        width: 52.5%;
+        margin-left: 2.5%;
+        overflow-x: auto;
+        display: block;
+      }
+
+      pre.fullwidth > code {
+        width: 90%;
+      }
+
+      .fullwidth {
+        max-width: 90%;
+        clear: both;
+      }
+
+      span.newthought {
+        font-variant: small-caps;
+        font-size: 1.2em;
+      }
+
+      input.margin-toggle {
+        display: none;
+      }
+
+      label.sidenote-number {
+        display: inline-block;
+        max-height: 2rem; /* should be less than or equal to paragraph line-height */
+      }
+
+      label.margin-toggle:not(.sidenote-number) {
+        display: none;
+      }
+
+      .iframe-wrapper {
+        position: relative;
+        padding-bottom: 56.25%; /* 16:9 */
+        padding-top: 25px;
+        height: 0;
+      }
+
+      .iframe-wrapper iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      @media (max-width: 760px) {
+        body {
+          width: 84%;
+          padding-left: 8%;
+          padding-right: 8%;
+        }
+
+        hr,
+        section > p,
+        section > footer,
+        section > table {
+          width: 100%;
+        }
+
+        pre > code {
+          width: 97%;
+        }
+
+        section > dl,
+        section > ol,
+        section > ul {
+          width: 90%;
+        }
+
+        figure {
+          max-width: 90%;
+        }
+
+        figcaption,
+        figure.fullwidth figcaption {
+          margin-right: 0%;
+          max-width: none;
+        }
+
+        blockquote {
+          margin-left: 1.5em;
+          margin-right: 0em;
+        }
+
+        blockquote p,
+        blockquote footer {
+          width: 100%;
+        }
+
+        label.margin-toggle:not(.sidenote-number) {
+          display: inline;
+        }
+
+        .sidenote,
+        .marginnote {
+          display: none;
+        }
+
+        .margin-toggle:checked + .sidenote,
+        .margin-toggle:checked + .marginnote {
+          display: block;
+          float: left;
+          left: 1rem;
+          clear: both;
+          width: 95%;
+          margin: 1rem 2.5%;
+          vertical-align: baseline;
+          position: relative;
+        }
+
+        label {
+          cursor: pointer;
+        }
+
+        div.table-wrapper,
+        table {
+          width: 85%;
+        }
+
+        img {
+          width: 100%;
+        }
+      }
+
+      /* ===== ox-tufte.css ===== */
+      :root {
+        --ox-tufte-content-width: 55%; /* set value consistent with "section > p" */
+        --ox-tufte-fullwidth: 163.636%; /* 90% of body, when ancestor is at 55% */
+        --ox-tufte-src-code-width: 97%;
+        /* 50+5=55% this is what is used by section > {dl, ol, ul} */
+        --ox-tufte-list-width: 50%;
+        --ox-tufte-list-padding-left: 5%;
+        /* font-size and line-height settings from tufte.css */
+        --ox-tufte-content-font-size: 1.4rem;
+        --ox-tufte-content-line-height: 2rem;
+        --ox-tufte-content-epigraph-margin-vertical: calc(5em / 1.4);
+        /* ^ equivalent of 5em when element has 1rem font-size */
+        --ox-tufte-note-line-height: 1.3;
+        --ox-tufte-note-font-size: 1.1rem;
+        --ox-tufte-note-code-font-size: 1rem;
+        --ox-tufte-code-font-family:
+          Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        --ox-tufte-code-font-size: 1rem;
+        --ox-tufte-code-font-size-sans: 1.2rem; /* from ".sans > code" */
+        --ox-tufte-code-line-height: 1.42;
+        /* values tufte.css reuses for h1,h3,h3 */
+        --ox-tufte-heading-font-style: italic;
+        --ox-tufte-heading-font-weight: 400;
+        --ox-tufte-heading-line-height: 1;
+        --ox-tufte-heading-code-font-size: 0.8em;
+        --ox-tufte-heading-min-margin-bottom: 1.4rem; /* h3=1.4rem; p=1.4rem; */
+        --ox-tufte-heading-min-font-size: 1.4rem; /* p=1.4rem; */
+      }
+
+      /* 1. Prevent adjustments of font size after orientation changes in iOS. */
+      /*    <https://github.com/necolas/normalize.css/blob/fc091cce1534909334c1911709a39c22d406977b/normalize.css#L13> */
+      html {
+        -webkit-text-size-adjust: 100%; /* 1 */
+      }
+
+      /**************************************************************************/
+      /* re-specify tufte.css values, for compatibility with org-generated html */
+      /**************************************************************************/
+      article {
+        /* add missing default from tufte.css */
+        font-size: var(--ox-tufte-content-font-size);
+        line-height: var(--ox-tufte-content-line-height);
+      }
+      article > p,
+      article > div.epigraph,
+      article > table,
+      article > mjx-container,
+      article > div.zeroth-section,
+      section > div,
+      section > h2 {
+        /* set value consistent with "section > p" */
+        width: var(--ox-tufte-content-width);
+      }
+      article > object {
+        max-width: var(--ox-tufte-content-width);
+      }
+      article figure object {
+        max-width: 100%;
+      }
+      article > p .fullwidth,
+      article > div .fullwidth,
+      section > div .fullwidth {
+        max-width: var(--ox-tufte-fullwidth);
+        width: max-content;
+      }
+      article > blockquote.fullwidth {
+        width: max-content;
+      }
+      @media (max-width: 760px) {
+        div.epigraph > blockquote.fullwidth {
+          width: unset;
+        }
+      }
+      section > dl,
+      section > ol,
+      section > ul,
+      article > dl,
+      article > ol,
+      article > ul {
+        width: var(--ox-tufte-list-width);
+        /* instead of tufte.css's -webkit-padding-start, which doesn't work */
+        padding-inline-start: var(--ox-tufte-list-padding-left);
+      }
+      blockquote .marginnote,
+      blockquote .sidenote {
+        font-style: normal;
+      }
+      /* code blocks. tufte.css also allows for code within headers and
+ * sidenotes/marginnotes. these are currently not supported by us. */
+      .org-src-container {
+        max-width: var(--ox-tufte-fullwidth);
+        width: var(--ox-tufte-fullwidth);
+        clear: both; /* necessary to prevent overlap between long label and sidenote */
+      }
+      body pre {
+        /* monospace content: .src .example */
+        /* FROM: pre.fullwidth > code in tufte.css; but adjusted */
+        width: var(--ox-tufte-src-code-width);
+        clear: both; /* ensure that it doesn't overlap sidenotes */
+        /* unset some unnecessary 'org' defaults, which interfere with tufte */
+        padding-left: 0;
+        padding-right: 0;
+        margin-left: auto;
+        margin-right: 0;
+      }
+      pre,
+      code {
+        /* FROM: "code, pre > code" in tufte.css */
+        font-family: var(--ox-tufte-code-font-family);
+        font-size: var(--ox-tufte-code-font-size);
+        line-height: var(--ox-tufte-code-line-height);
+      }
+      .sans pre,
+      .sans code {
+        font-size: var(--ox-tufte-code-font-size-sans);
+        line-height: var(--ox-tufte-code-line-height);
+      }
+      .sans h1 code,
+      .sans h2 code,
+      .sans h3 code,
+      h1 code,
+      h2 code,
+      h3 code {
+        /* fix for tufte.css */
+        font-size: var(--ox-tufte-heading-code-font-size);
+      }
+      code {
+        vertical-align: middle;
+      }
+      .sidenote code, .marginnote code, /* inline code */
+.marginnote pre {
+        /* code blocks */
+        font-size: var(--ox-tufte-note-code-font-size);
+        line-height: var(--ox-tufte-note-line-height);
+      }
+
+      article div figure {
+        /* tufte.css doesn't intend figure to be within div, but org generates it as
+     * such. reset width to full width of article as tufte.css intends */
+        max-width: 100%;
+      }
+      blockquote p,
+      blockquote footer {
+        width: 100%;
+      }
+
+      /**********************************************************/
+      /* tufte.css fixes; should probably be submitted upstream */
+      /**********************************************************/
+      .sans .numeral {
+        /* don't use et-book-roman-old-style when using .sans */
+        font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
+      }
+      article {
+        /* needed, if sidenotes have large content */
+        /* we don't apply this on "section", because we do want the sections to be
+     * overlappable with the sidenotes of previous section */
+        overflow-y: auto;
+      }
+
+      /****************************/
+      /* unset/alter org defaults */
+      /****************************/
+      #content {
+        /* ID corresponding to main article (excluding pre/postamble) */
+        max-width: 100%;
+      }
+      /* verse */
+      p.verse {
+        /* this verse element will always be within a <blockquote> */
+        /* tufte.css already provides margin-left/right for enclosing blockquote */
+        margin-left: 0;
+      }
+      #footnotes {
+        /* needed, if sidenotes have large content */
+        /* we want to make sure that the footnotes section starts after all the content
+      * for "sections" and "sidenotes" is done */
+        clear: both;
+        width: unset;
+      }
+
+      /***************************/
+      /* undo tufte.css defaults */
+      /***************************/
+      body pre.example {
+        /* in org, this is within blockquote */
+        font-style: normal;
+      }
+      /* verse: undoing "blockquote p, blockquote footer" from tufte.css */
+      div.verse blockquote p,
+      div.verse blockquote footer {
+        width: 100%;
+      }
+
+      /********************************************************/
+      /* verse blocks: support and distinguish from epigraphs */
+      /********************************************************/
+      div.verse > blockquote {
+        /* gray bar on the left */
+        border-left: 3px solid #ccc;
+        padding-left: 10px;
+      }
+
+      /***********************************/
+      /* tufte.css consistent extensions */
+      /***********************************/
+      /***************************/
+      /* support for h4 headings */
+      /***************************/
+      h4 > code {
+        font-size: var(--ox-tufte-heading-code-font-size);
+      }
+      h4 {
+        font-style: var(--ox-tufte-heading-font-style);
+        font-weight: var(--ox-tufte-heading-font-weight);
+        margin-bottom: var(--ox-tufte-heading-min-margin-bottom);
+        line-height: var(--ox-tufte-heading-line-height);
+      }
+      h4 {
+        font-size: 1.5rem; /* h3=1.7rem; */
+        margin-top: 1.8rem; /* h3=2rem; */
+      }
+
+      /************************************/
+      /* sidenotes in headings h2, h3, h4 */
+      /************************************/
+      h2 .sidenote,
+      h2 .marginnote,
+      h3 .sidenote,
+      h3 .marginnote,
+      h4 .sidenote,
+      h4 .marginnote {
+        font-style: normal;
+        font-weight: normal;
+      }
+
+      /**********************/
+      /* footnote reference */
+      /**********************/
+      .sidenote-number > sup.numeral,
+      .sidenote > sup.numeral {
+        /* same as ".sidenote-number:after", ".sidenote:before" */
+        font-size: 1rem;
+        line-height: 1rem;
+      }
+      /* we don't rely on CSS numbering */
+      .sidenote-number:after,
+      .sidenote:before {
+        content: none;
+      }
+
+      /****************/
+      /* small screen */
+      /****************/
+      @media (max-width: 760px) {
+        :root {
+          --ox-tufte-content-width: 100%;
+          --ox-tufte-fullwidth: 100%;
+          --ox-tufte-list-width: 90;
+          --ox-tufte-list-padding-left: 10%;
+        }
+        /**********************************************************/
+        /* tufte.css fixes; should probably be submitted upstream */
+        /**********************************************************/
+        .margin-toggle:checked + .sidenote,
+        .margin-toggle:checked + .marginnote {
+          /* what tufte.css does results in minute horizontal scrolling on*/
+          /* sufficiently small screens; below fixes that */
+          margin-left: auto;
+          margin-right: 0;
+          left: 0;
+          float: right;
+        }
+        .marginnote img,
+        .sidenote img {
+          height: auto;
+          width: auto;
+        }
+      }
+
+      /*****************************************************************************/
+      /* assorted bugfixes and additional tweaks                                   */
+      /* NOTE: code below likely needs to be refactored and assimilated into above */
+      /*****************************************************************************/
+
+      /* BEGIN: width and placement of sidenotes + lists, epigraphs */
+      :root {
+        --ox-tufte-sidenote-width-max: 385px;
+        --ox-tufte-sidenote-width-standard: 50%;
+        --ox-tufte-sidenote-margin-right-min: -462px;
+        --ox-tufte-sidenote-margin-right-standard: -60%;
+      }
+      article > blockquote {
+        /* assuming within an element 55% in width */
+        width: 50%;
+        margin-left: 5%;
+      }
+      blockquote {
+        margin-left: calc(100% / 11);
+        margin-right: 0;
+      }
+      blockquote .sidenote,
+      blockquote .marginnote {
+        min-width: unset;
+        width: calc(var(--ox-tufte-sidenote-width-standard) / (10 / 11));
+        margin-right: calc(
+          var(--ox-tufte-sidenote-margin-right-standard) / (10 / 11)
+        );
+      }
+      @media (max-width: 760px) {
+        div.epigraph blockquote p {
+          overflow-y: auto;
+        }
+      }
+      article ul,
+      article ol,
+      article dl {
+        width: var(--ox-tufte-list-width); /* 50% */
+        padding-inline-start: var(--ox-tufte-list-padding-left); /* 5% */
+      }
+      article ul ul,
+      article ol ol,
+      article ul ol,
+      article ol ul {
+        padding-inline-start: calc(
+          100% / 10
+        ); /* 5% wrt body, when 100% is 50% */
+        width: calc(100% * 9 / 10); /* 45% wrt body, when 100% is 50% */
+      }
+      article ul ul ul,
+      article ol ol ul,
+      article ul ol ul,
+      article ol ul ul,
+      article ul ul ol,
+      article ol ol ol,
+      article ul ol ol,
+      article ol ul ol {
+        padding-inline-start: calc(
+          100% / 9
+        ); /* 5% wrt body, when 100% is 45% */
+        width: calc(100% * 8 / 9); /* 40% wrt body, when 100% is 45% */
+      }
+      section ul,
+      section ol,
+      section dl {
+        padding-inline-start: calc(100% / 11);
+        width: calc(100% * 10 / 11);
+      }
+      article ul .sidenote,
+      article ol .sidenote,
+      article ul .marginnote,
+      article ol .marginnote {
+        width: min(
+          var(--ox-tufte-sidenote-width-max),
+          calc(var(--ox-tufte-sidenote-width-standard) / (10 / 11))
+        );
+        margin-right: max(
+          var(--ox-tufte-sidenote-margin-right-min),
+          calc(var(--ox-tufte-sidenote-margin-right-standard) / (10 / 11))
+        );
+      }
+      article ul ul .sidenote,
+      article ul ul .marginnote,
+      article ul ol .sidenote,
+      article ul ol .marginnote,
+      article ol ol .sidenote,
+      article ol ol .marginnote,
+      article ol ul .sidenote,
+      article ol ul .marginnote {
+        /* 11/9 = 11/10 X(10/9) */
+        width: min(
+          var(--ox-tufte-sidenote-width-max),
+          calc(var(--ox-tufte-sidenote-width-standard) / (9 / 11))
+        );
+        margin-right: max(
+          var(--ox-tufte-sidenote-margin-right-min),
+          calc(var(--ox-tufte-sidenote-margin-right-standard) / (9 / 11))
+        );
+      }
+      article ul ul ul .sidenote,
+      article ul ul ul .marginnote,
+      article ul ul ol .sidenote,
+      article ul ul ol .marginnote,
+      article ul ol ul .sidenote,
+      article ul ol ul .marginnote,
+      article ul ol ol .sidenote,
+      article ul ol ol .marginnote,
+      article ol ol ul .sidenote,
+      article ol ol ul .marginnote,
+      article ol ol ol .sidenote,
+      article ol ol ol .marginnote,
+      article ol ul ul .sidenote,
+      article ol ul ul .marginnote article ol ul ol .sidenote,
+      article ol ul ol .marginnote {
+        /* 11/8 = 11/10 X(10/9) X(9/8) */
+        width: min(
+          var(--ox-tufte-sidenote-width-max),
+          calc(var(--ox-tufte-sidenote-width-standard) / (8 / 11))
+        );
+        margin-right: max(
+          var(--ox-tufte-sidenote-margin-right-min),
+          calc(var(--ox-tufte-sidenote-margin-right-standard) / (8 / 11))
+        );
+      }
+      @media (max-width: 760px) {
+        ul li,
+        ol li {
+          overflow-y: auto;
+          /* however, this causes issues: https://stackoverflow.com/a/40912185 */
+          list-style-position: inside;
+          margin-left: -1em;
+        }
+      }
+      /* fix padding issues first and make them percentages */
+      article dl > dd {
+        margin-left: calc(100% / 10);
+      }
+      /* fix sidenote width and margin-right */
+      article dl dt .sidenote,
+      article dl dt .marginnote {
+        width: min(
+          var(--ox-tufte-sidenote-width-max),
+          calc(var(--ox-tufte-sidenote-width-standard) / (10 / 11))
+        );
+        margin-right: max(
+          var(--ox-tufte-sidenote-margin-right-min),
+          calc(var(--ox-tufte-sidenote-margin-right-standard) / (10 / 11))
+        );
+        font-weight: normal;
+      }
+      article dl dd .sidenote,
+      article dl dd .marginnote {
+        /* 11/9 = 11/10 X(10/9) */
+        width: min(
+          var(--ox-tufte-sidenote-width-max),
+          calc(var(--ox-tufte-sidenote-width-standard) / (9 / 11))
+        );
+        margin-right: max(
+          var(--ox-tufte-sidenote-margin-right-min),
+          calc(var(--ox-tufte-sidenote-margin-right-standard) / (9 / 11))
+        );
+      }
+      /* also check on smaller screens */
+      @media (max-width: 760px) {
+        dl dt,
+        dl dd {
+          overflow-y: auto;
+        }
+      }
+      article dl dl {
+        padding-inline-start: calc(
+          100% / 9
+        ); /* 5% wrt body, when 100% is 45% wrt body */
+        width: calc(100% * 8 / 9); /* 40% wrt body */
+      }
+      article dl dl > dd {
+        margin-left: calc(
+          100% / 8
+        ); /* 5% wrt body, when 100% is 40% wrt body */
+      }
+      article dl dl dt .sidenote,
+      article dl dl dt .marginnote {
+        /* 11/8 = 11/10 x 10/9 x 9/8 */
+        width: min(
+          var(--ox-tufte-sidenote-width-max),
+          calc(var(--ox-tufte-sidenote-width-standard) / (8 / 11))
+        );
+        margin-right: max(
+          var(--ox-tufte-sidenote-margin-right-min),
+          calc(var(--ox-tufte-sidenote-margin-right-standard) / (8 / 11))
+        );
+        font-weight: normal;
+      }
+      article dl dl dd .sidenote,
+      article dl dl dd .marginnote {
+        /* 11/7 */
+        width: min(
+          var(--ox-tufte-sidenote-width-max),
+          calc(var(--ox-tufte-sidenote-width-standard) / (7 / 11))
+        );
+        margin-right: max(
+          var(--ox-tufte-sidenote-margin-right-min),
+          calc(var(--ox-tufte-sidenote-margin-right-standard) / (7 / 11))
+        );
+      }
+
+      /* BEGIN BONUS: fix top-level code blocks */
+      article > section .org-src-container {
+        /* make .org-src-container in ox-tufte.css more specific */
+        max-width: var(--ox-tufte-fullwidth);
+        width: var(--ox-tufte-fullwidth);
+      }
+      article > div.org-src-container {
+        /* override .org-src-container in ox-tufte.css for toplevel */
+        max-width: 90%;
+        width: 90%;
+      }
+      /* END BONUS: fix top-level code blocks */
+      /* END: width and placement of sidenotes + lists, epigraphs */
+
+      /* BEGIN: width of result blocks */
+      article > pre.example {
+        width: calc(97% * 0.9);
+        margin-right: 10%;
+      }
+      section pre.example {
+        width: calc(var(--ox-tufte-fullwidth) * 0.97);
+        margin-left: calc(var(--ox-tufte-fullwidth) * 0.03);
+      }
+      @media (max-width: 760px) {
+        section pre.example {
+          margin-left: auto;
+        }
+      }
+      /* END: width of result blocks */
+
+      /* BEGIN: fix horizontal scroll on small screens */
+      .org-src-name {
+        display: inline-block;
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      /* END: fix horizontal */
+
+      /* BEGIN: block margin notes */
+      /***************************************************************************/
+      /* block marginnotes - allows us to include lists, paragraphs, tables etc. */
+      /***************************************************************************/
+      article div {
+        /* add missing default from tufte.css */
+        font-size: var(--ox-tufte-content-font-size);
+        line-height: var(--ox-tufte-content-line-height);
+      }
+      div.epigraph {
+        /* NOTE: tufte.css has margins for epigraph in "em" which relies on font-size
+     * for div element not being altered from default; otherwise epigraph margin
+     * will scale with it (<https://zellwk.com/blog/rem-vs-em/>). now epigraphs,
+     * unlike quotes don't have any business in the margin area. but if we did,
+     * it wouldn't make sense to use the same margin absolutely. thus
+     * blockquotes should be in 'em' instead of 'rem'. however, in order to get
+     * same behaviour as tufte either the 'em' value will need to be modified
+     * for epigraph or the font size specified for 'article div' will need to be
+     * modified and will no longer be consistent with 'p'. */
+        margin: var(--ox-tufte-content-epigraph-margin-vertical) 0;
+      }
+      div.marginnote dl,
+      div.marginnote ol,
+      div.marginnote p,
+      div.marginnote ul {
+        font-size: var(--ox-tufte-note-font-size);
+        line-height: var(--ox-tufte-note-line-height);
+      }
+      div.marginnote p {
+        margin-top: var(--ox-tufte-note-font-size);
+        margin-bottom: var(--ox-tufte-note-font-size);
+      }
+      @media (max-width: 760px) {
+        div.marginnote + *, /* needed for block marginnotes */
+    h2, h3, h4, p {
+          /* these are needed for margin/sidenotes in general */
+          clear: both;
+        }
+      }
+      /* END: block margin notes */
+
+      /* BEGIN: captions on figures */
+      figure > figcaption {
+        /* undo tufte-css tweaks, till they're better supported */
+        max-width: unset;
+        float: left;
+        width: 100%;
+      }
+      /* undo tufte-css tweaks, till they're better supported */
+      figure.fullwidth figcaption {
+        margin-right: unset;
+      }
+      img.fullwidth + figcaption {
+        width: var(--ox-tufte-fullwidth);
+      }
+      /* END: captions on figures */
+
+      /* BEGIN: fullwidth images */
+      img.fullwidth {
+        display: block;
+      }
+      /* END: fullwidth images */
+
+      /* BEGIN: prevent side-scroll when result of inline call is long */
+      article code {
+        overflow-x: auto;
+        max-width: 100%;
+        display: inline-block;
+      }
+      /* END: prevent side-scroll when result of inline call is long */
+
+      /* ===== IBM Plex overrides ===== */
+      body,
+      article {
+        font-family: "IBM Plex Serif", et-book, Georgia, serif !important;
+        background-color: #fffff8;
+        color: #111;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      .sans {
+        font-family: "IBM Plex Sans", system-ui, sans-serif !important;
+        font-weight: 500;
+      }
+      code,
+      pre,
+      .org-src-container pre {
+        font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+      }
+      .sidenote,
+      .marginnote {
+        font-family: "IBM Plex Serif", Georgia, serif;
+      }
+      mjx-container,
+      .MathJax,
+      .katex {
+        margin: 0.6em 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        max-width: 100%;
+      }
+      .org-latex-preview {
+        max-width: 100%;
+        height: auto;
+      }
+
+      /* Tufte-friendly syntax highlighting colors */
+      code.language-control-dsl {
+        display: block;
+        padding: 1em;
+        background-color: #f4f4f4;
+        border-radius: 4px;
+        font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+        font-size: 0.9rem !important;
+        line-height: 1.5 !important;
+        color: #111;
+        overflow-x: auto;
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        code.language-control-dsl {
+          background-color: #1e1e1e;
+          color: #ddd;
+        }
+      }
+
+      .token.keyword {
+        color: #d73a49;
+        font-weight: bold;
+      }
+      .token.comment {
+        color: #6a737d;
+        font-style: italic;
+      }
+      .token.number {
+        color: #005cc5;
+      }
+      .token.operator {
+        color: #d73a49;
+      }
+      .token.variable {
+        color: #e36209;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .token.keyword {
+          color: #ff7b72;
+        }
+        .token.comment {
+          color: #8b949e;
+        }
+        .token.number {
+          color: #79c0ff;
+        }
+        .token.operator {
+          color: #ff7b72;
+        }
+        .token.variable {
+          color: #ffa657;
+        }
+      }
+    </style>
+    <script>
+      window.MathJax = {
+        tex: {
+          ams: {
+            multlineWidth: "85%",
+          },
+          tags: "ams",
+          tagSide: "right",
+          tagIndent: ".8em",
+        },
+        chtml: {
+          scale: 1.0,
+          displayAlign: "center",
+          displayIndent: "0em",
+        },
+        svg: {
+          scale: 1.0,
+          displayAlign: "center",
+          displayIndent: "0em",
+        },
+        output: {
+          font: "mathjax-modern",
+          displayOverflow: "overflow",
+        },
+      };
+      Prism.languages["control-dsl"] = {
+        comment: [
+          { pattern: /#.*/, greedy: true },
+          { pattern: /\/\/.*/, greedy: true },
+        ],
+        keyword:
+          /\b(?:problem|end_problem|state|control|parameter|horizon|dynamics|end_dynamics|initial|end_initial|target|end_target|bounds|end_bounds|cost|end_cost|solve|end_solve|method|grid|controls|in|running|terminal|dynamic_programming)\b/i,
+        number: /\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/,
+        operator: /[+\-*/^=,:\[\]()'']/,
+        variable: /\b[a-zA-Z_][a-zA-Z0-9_]*\b/,
+      };
+      document.addEventListener("DOMContentLoaded", () => {
+        // Target Org-mode generated code blocks (e.g., src-control-dsl, src-ocaml, etc.)
+        document
+          .querySelectorAll('pre[class*="src-"] > code')
+          .forEach((block) => {
+            block.classList.add("language-control-dsl");
+            Prism.highlightElement(block);
+          });
+      });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script
+      id="MathJax-script"
+      async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+    ></script>
+    <!-- Prism.js for Control Lab DSL Syntax Highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script>
+      // Define the custom Control Lab DSL language for Prism
+      Prism.languages["control-dsl"] = {
+        comment: [
+          { pattern: /#.*/, greedy: true },
+          { pattern: /\/\/.*/, greedy: true },
+        ],
+        keyword:
+          /\b(?:problem|end_problem|state|control|parameter|horizon|dynamics|end_dynamics|initial|end_initial|target|end_target|bounds|end_bounds|cost|end_cost|solve|end_solve|method|grid|controls|in|running|terminal|dynamic_programming)\b/i,
+        number: /\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/,
+        operator: /[+\-*/^=,:\[\]()']/,
+        variable: /\b[a-zA-Z_][a-zA-Z0-9_]*\b/,
+      };
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Target Org-mode generated code blocks (e.g., src-text, src-ocaml, src-control-dsl)
+        // and apply our custom DSL highlighting to them.
+        document.querySelectorAll("pre.src > code").forEach((block) => {
+          block.classList.add("language-control-dsl");
+          Prism.highlightElement(block);
+        });
+      });
+    </script>
+    <style>
+      /* Tufte-friendly syntax highlighting colors */
+      code.language-control-dsl {
+        display: block;
+        padding: 1em;
+        background-color: #f4f4f4;
+        border-radius: 4px;
+        font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+        font-size: 0.9rem !important;
+        line-height: 1.5 !important;
+        color: #111;
+        overflow-x: auto;
+        /* Align with Tufte's fullwidth code blocks */
+        width: var(--ox-tufte-fullwidth);
+        clear: both;
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        code.language-control-dsl {
+          background-color: #f4f4f4;
+          color: #1e1e1e;
+        }
+      }
+
+      .token.keyword {
+        color: #d73a49;
+        font-weight: bold;
+      }
+      .token.comment {
+        color: #6a737d;
+        font-style: italic;
+      }
+      .token.number {
+        color: #005cc5;
+      }
+      .token.operator {
+        color: #d73a49;
+      }
+      .token.variable {
+        color: #e36209;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .token.keyword {
+          color: #ff7b72;
+        }
+        .token.comment {
+          color: #8b949e;
+        }
+        .token.number {
+          color: #79c0ff;
+        }
+        .token.operator {
+          color: #ff7b72;
+        }
+        .token.variable {
+          color: #ffa657;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content" class="content">
+      <h1 class="title">Milestone; Backward DP</h1>
+      <h2>
+        <center>
+          <a href="./demo.html"> Demo </a> |
+          <a href="https://github.com/mmdbalkhi/milestone">Github</a>
+        </center>
+      </h2>
+      <div id="table-of-contents" role="doc-toc">
+        <h2>Table of Contents</h2>
+        <div id="text-table-of-contents" role="doc-toc">
+          <ul>
+            <li>
+              <a href="#org99c01cb">1. Overview</a>
+              <ul>
+                <li><a href="#org7f16d57">1.1. Scope and Focus</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#orgee35afe">2. How It Works</a>
+              <ul>
+                <li>
+                  <a href="#orgd98eb26">2.1. Backward Dynamic Programming</a>
+                </li>
+                <li><a href="#org7925b9e">2.2. DSL Compilation Pipeline</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#org7f6f53b">3. DSL Reference</a>
+              <ul>
+                <li>
+                  <a href="#org0ce0959">3.1. Supported Blocks and Syntax</a>
+                </li>
+                <li><a href="#org9639605">3.2. Expression Language</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#orgfa898cb">4. Example Problems</a>
+              <ul>
+                <li><a href="#org9beed48">4.1. 1D Thermal Regulation</a></li>
+                <li><a href="#orgde0f8b8">4.2. 2D Damped Linear Motion</a></li>
+              </ul>
+            </li>
+            <li><a href="#org7161a33">5. Limitations and Design Notes</a></li>
+            <li>
+              <a href="#orgbec9ad4">6. Building</a>
+              <ul>
+                <li><a href="#org194cf40">6.1. Prerequisites</a></li>
+                <li><a href="#orgd9cd98a">6.2. Build the OCaml Project</a></li>
+                <li>
+                  <a href="#org8948797"
+                    >6.3. Build the JavaScript Output (<code>bin_js</code>)</a
+                  >
+                </li>
+              </ul>
+            </li>
+            <li><a href="#org94dc380">7. AI Assistance Disclosure</a></li>
+            <li><a href="#org38570f5">8. License</a></li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-org99c01cb" class="outline-2">
+        <h2 id="org99c01cb">
+          <span class="section-number-2">1.</span> Overview
+        </h2>
+        <div class="outline-text-2" id="text-1">
+          <p>
+            <b>Milestone</b> (also titled <b>Backward DP</b>) is an educational
+            tool for formulating and solving finite-horizon, discrete-time
+            optimal control problems using
+            <b>backward dynamic programming</b> (DP) and forward trajectory
+            rollout.
+          </p>
+
+          <p>
+            Problems are written in a declarative domain-specific language
+            (DSL), compiled and semantically validated in OCaml, solved over
+            discretized state and control grids, and inspected through a
+            lightweight web interface.
+          </p>
+        </div>
+        <div id="outline-container-org7f16d57" class="outline-3">
+          <h3 id="org7f16d57">
+            <span class="section-number-3">1.1.</span> Scope and Focus
+          </h3>
+          <div class="outline-text-3" id="text-1-1">
+            <p>
+              The project is designed for low-dimensional discrete-time control
+              systems (1D and 2D state spaces with 1D control) with algebraic
+              dynamics and cost expressions. It prioritizes clarity,
+              correctness, and pedagogical value over heavy tooling or
+              high-dimensional numerical approximations.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-orgee35afe" class="outline-2">
+        <h2 id="orgee35afe">
+          <span class="section-number-2">2.</span> How It Works
+        </h2>
+        <div class="outline-text-2" id="text-2"></div>
+        <div id="outline-container-orgd98eb26" class="outline-3">
+          <h3 id="orgd98eb26">
+            <span class="section-number-3">2.1.</span> Backward Dynamic
+            Programming
+          </h3>
+          <div class="outline-text-3" id="text-2-1">
+            <p>
+              For a discrete-time problem over a finite horizon \(N\) with state
+              transition \(x_{k+1} = f(x_k, u_k)\), running cost \(\ell(x_k,
+              u_k)\), and terminal cost \(\Phi(x_N)\):
+            </p>
+
+            <ol class="org-ol">
+              <li>
+                <b>Terminal Initialization (\(k = N\)):</b> Evaluate the
+                terminal cost \(\Phi\) across the discretized state grid to
+                obtain the value function \(V_N\).
+              </li>
+              <li>
+                <b>Backward Recursion (\(k = N-1, \dots, 0\)):</b> At each step
+                and each state grid point, evaluate candidate control values
+                from the discretized control set, interpolate the next-step
+                value function \(V_{k+1}\) on the state grid when needed, and
+                record both the minimum cost-to-go \(V_k\) and the corresponding
+                optimal control action.
+              </li>
+              <li>
+                <b>Forward Rollout:</b> Starting from the specified initial
+                state \(x_0\), step forward from \(k = 0\) to \(N-1\) by
+                applying the optimal control policy and advancing the state
+                dynamics to produce the state and control trajectories.
+              </li>
+            </ol>
+          </div>
+        </div>
+        <div id="outline-container-org7925b9e" class="outline-3">
+          <h3 id="org7925b9e">
+            <span class="section-number-3">2.2.</span> DSL Compilation Pipeline
+          </h3>
+          <div class="outline-text-3" id="text-2-2">
+            <p>
+              The DSL front-end in OCaml processes input text in four stages:
+            </p>
+            <ul class="org-ul">
+              <li>
+                <b>Lexing:</b> Tokenizes keywords, identifiers, numbers,
+                operators, delimiters, and comments (<code>#</code> and
+                <code>//</code>).
+              </li>
+              <li>
+                <b>Parsing:</b> Builds an abstract syntax tree (AST) using a
+                recursive-descent parser and expression parser respecting
+                operator precedence and right-associative exponentiation
+                (<code>^</code>).
+              </li>
+              <li>
+                <b>Semantic Validation:</b> Checks state/control counts,
+                presence of required dynamics and initial state entries, valid
+                bounds (<code>lo &lt; hi</code>), positive horizon, matching
+                state grid dimensions, valid grid/control resolutions, and
+                declaration of all referenced variables.
+              </li>
+              <li>
+                <b>Compilation:</b> Evaluates parameters, constructs
+                closure-based dynamics and cost functions, builds state/control
+                grids, and returns a compiled problem or a descriptive error
+                message.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-org7f6f53b" class="outline-2">
+        <h2 id="org7f6f53b">
+          <span class="section-number-2">3.</span> DSL Reference
+        </h2>
+        <div class="outline-text-2" id="text-3">
+          <p>
+            Each problem is enclosed in a
+            <code>problem &lt;Name&gt; ... end_problem</code>
+            block. Sections inside a problem block may appear in any order,
+            though grouping them logically improves readability.
+          </p>
+        </div>
+        <div id="outline-container-org0ce0959" class="outline-3">
+          <h3 id="org0ce0959">
+            <span class="section-number-3">3.1.</span> Supported Blocks and
+            Syntax
+          </h3>
+          <div class="outline-text-3" id="text-3-1">
+            <ul class="org-ul">
+              <li>
+                <code>state: &lt;var1&gt;[, &lt;var2&gt;]</code> Declares state
+                variables (1 or 2 state variables in the current version).
+              </li>
+              <li>
+                <code>control: &lt;u_var&gt;</code> Declares the control
+                variable (1 control variable in the current version).
+              </li>
+              <li>
+                <code>parameter:</code> Declares constants/parameters as
+                <code>name = &lt;expr&gt;</code> lines until the next section
+                begins.
+              </li>
+              <li>
+                <code>dynamics: ... end_dynamics</code> Specifies one state
+                transition equation per state variable using prime notation:
+                <code>x' = &lt;expr&gt;</code>.
+              </li>
+              <li>
+                <code>initial: ... end_initial</code> Specifies the initial
+                value for each state variable: <code>x = &lt;expr&gt;</code>.
+              </li>
+              <li>
+                <code>target: ... end_target</code> Optional block parsed into
+                the AST (<code>x = &lt;expr&gt;</code>); target tracking in
+                costs or rollout metrics is expressed explicitly in the cost
+                expressions when needed.
+              </li>
+              <li>
+                <code>horizon: &lt;int&gt;</code> Sets the finite time horizon
+                (\(\ge 1\)).
+              </li>
+              <li>
+                <code>bounds: ... end_bounds</code> Specifies lower and upper
+                bounds (<code>name in [lo, hi]</code> with
+                <code>lo &lt; hi</code>) for every declared state and control
+                variable.
+              </li>
+              <li>
+                <code>cost: ... end_cost</code> Defines
+                <code>running = &lt;expr&gt;</code> and/or
+                <code>terminal = &lt;expr&gt;</code> (defaulting to
+                <code>0.0</code> when omitted).
+              </li>
+              <li>
+                <code>solve: ... end_solve</code> Configures the solver:
+                <ul class="org-ul">
+                  <li><code>method = dynamic_programming</code></li>
+                  <li>
+                    <code>grid = [nx]</code> (for 1D) or
+                    <code>grid = [nx, ny]</code> (for 2D), with each resolution
+                    \(\ge 2\)
+                  </li>
+                  <li>
+                    <code>controls = &lt;int&gt;</code> (number of discrete
+                    control grid points, \(\ge 2\))
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div id="outline-container-org9639605" class="outline-3">
+          <h3 id="org9639605">
+            <span class="section-number-3">3.2.</span> Expression Language
+          </h3>
+          <div class="outline-text-3" id="text-3-2">
+            <p>
+              Expressions support integer and floating-point literals, declared
+              identifiers (states, control, parameters), parentheses, unary
+              negation (<code>-</code>), binary <code>+</code>, <code>-</code>,
+              <code>*</code>, <code>/</code>, and right-associative power
+              <code>^</code>. Built-in math functions such as <code>sin</code>,
+              <code>cos</code>, <code>exp</code>, or <code>abs</code> are not
+              yet included in the expression grammar.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-orgfa898cb" class="outline-2">
+        <h2 id="orgfa898cb">
+          <span class="section-number-2">4.</span> Example Problems
+        </h2>
+        <div class="outline-text-2" id="text-4"></div>
+        <div id="outline-container-org9beed48" class="outline-3">
+          <h3 id="org9beed48">
+            <span class="section-number-3">4.1.</span> 1D Thermal Regulation
+          </h3>
+          <div class="outline-text-3" id="text-4-1">
+            <div class="org-src-container">
+              <pre
+                class="src src-control-dsl"
+              ><code>problem RoomTemperatureControl
+    state:
+        T
+    control:
+        u
+    parameter:
+        dt = 0.2
+        alpha = 0.15
+        T_amb = 5.0
+        beta = 0.8
+        T_ref = 20.0
+        u_weight = 0.05
+        term_weight = 20.0
+    dynamics:
+        T' = T + dt * (-alpha * (T - T_amb) + beta * u)
+    end_dynamics
+    initial:
+        T = 10.0
+    end_initial
+    horizon: 25
+    bounds:
+        T in [0.0, 30.0]
+        u in [0.0, 10.0]
+    end_bounds
+    cost:
+        running = (T - T_ref)^2 + u_weight * u^2
+        terminal = term_weight * (T - T_ref)^2
+    end_cost
+    solve:
+        method = dynamic_programming
+        grid = [61]
+        controls = 21
+    end_solve
+end_problem
+</code></pre>
+            </div>
+          </div>
+        </div>
+        <div id="outline-container-orgde0f8b8" class="outline-3">
+          <h3 id="orgde0f8b8">
+            <span class="section-number-3">4.2.</span> 2D Damped Linear Motion
+          </h3>
+          <div class="outline-text-3" id="text-4-2">
+            <div class="org-src-container">
+              <pre class="src src-control-dsl"><code>problem DampedPositioning2D
+    state:
+        x, v
+    control:
+        u
+    parameter:
+        dt = 0.1
+        b = 0.4
+        r = 0.1
+        q_term = 12.0
+    dynamics:
+        x' = x + dt * v
+        v' = v + dt * (-b * v + u)
+    end_dynamics
+    initial:
+        x = 4.0
+        v = -1.0
+    end_initial
+    horizon: 20
+    bounds:
+        x in [-6.0, 6.0]
+        v in [-5.0, 5.0]
+        u in [-3.0, 3.0]
+    end_bounds
+    cost:
+        running = x^2 + v^2 + r * u^2
+        terminal = q_term * (x^2 + v^2)
+    end_cost
+    solve:
+        method = dynamic_programming
+        grid = [31, 31]
+        controls = 15
+    end_solve
+end_problem
+</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-org7161a33" class="outline-2">
+        <h2 id="org7161a33">
+          <span class="section-number-2">5.</span> Limitations and Design Notes
+        </h2>
+        <div class="outline-text-2" id="text-5">
+          <ul class="org-ul">
+            <li>
+              <b>Curse of Dimensionality:</b> Grid size grows exponentially with
+              the number of state variables. Tabular backward DP is practical
+              here for 1D and 2D systems with moderate grid resolutions.
+            </li>
+            <li>
+              <b>Static vs. Dynamic Optimization:</b> Milestone targets
+              sequential decision-making with state dynamics over a time horizon
+              rather than static single-variable calculus optimization problems.
+            </li>
+            <li>
+              <b>Expression Scope:</b> Only basic arithmetic and power operators
+              are currently supported in DSL expressions; non-polynomial or
+              piecewise functions (such as <code>abs</code> or trigonometric
+              functions) require smooth algebraic approximations or
+              host-language modeling.
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div id="outline-container-orgbec9ad4" class="outline-2">
+        <h2 id="orgbec9ad4">
+          <span class="section-number-2">6.</span> Building
+        </h2>
+        <div class="outline-text-2" id="text-6"></div>
+        <div id="outline-container-org194cf40" class="outline-3">
+          <h3 id="org194cf40">
+            <span class="section-number-3">6.1.</span> Prerequisites
+          </h3>
+          <div class="outline-text-3" id="text-6-1">
+            <p>Install an OCaml toolchain (e.g., via <code>opam</code>)</p>
+          </div>
+        </div>
+        <div id="outline-container-orgd9cd98a" class="outline-3">
+          <h3 id="orgd9cd98a">
+            <span class="section-number-3">6.2.</span> Build the OCaml Project
+          </h3>
+          <div class="outline-text-3" id="text-6-2">
+            <p>
+              From the project root, build the OCaml library, executables, and
+              tests:
+            </p>
+
+            <div class="org-src-container">
+              <pre class="src src-sh"><code>dune build
+</code></pre>
+            </div>
+
+            <p>Optionally, run the test suite:</p>
+
+            <div class="org-src-container">
+              <pre class="src src-sh"><code>dune runtest
+</code></pre>
+            </div>
+          </div>
+        </div>
+        <div id="outline-container-org8948797" class="outline-3">
+          <h3 id="org8948797">
+            <span class="section-number-3">6.3.</span> Build the JavaScript
+            Output (<code>bin_js</code>)
+          </h3>
+          <div class="outline-text-3" id="text-6-3">
+            <p>
+              Build the JavaScript target with <code>dune</code>, you need
+              <a href="https://github.com/ocsigen/js_of_ocaml"
+                ><code>json_of_ocaml</code></a
+              >
+              for this.
+            </p>
+            <div class="org-src-container">
+              <pre
+                class="src src-sh"
+              ><code>opam install js_of_ocaml js_of_ocaml-ppx
+dune build bin_js/bridge_js.js
+</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-org94dc380" class="outline-2">
+        <h2 id="org94dc380">
+          <span class="section-number-2">7.</span> AI Assistance Disclosure
+        </h2>
+        <div class="outline-text-2" id="text-7">
+          <p>
+            AI tools were used during development as an interactive assistant
+            for drafting and refining documentation, exploring modeling and UI
+            options, and reviewing design trade-offs. All problem formulations,
+            mathematical interpretations, code changes, and verification on
+            local test cases were reviewed and finalized by the author.
+          </p>
+        </div>
+      </div>
+      <div id="outline-container-org38570f5" class="outline-2">
+        <h2 id="org38570f5">
+          <span class="section-number-2">8.</span> License
+        </h2>
+        <div class="outline-text-2" id="text-8">
+          <p>
+            This project is released under the BSD 2-Clause License. For more
+            information, see the <a href="./LICENSE">LICENSE</a> file.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div id="postamble" class="status">
+      <p class="author">Author: Komeil Parseh</p>
+      <p class="date">Created: 2026-11-22 Sun 17:06</p>
+    </div>
+  </body>
+</html>

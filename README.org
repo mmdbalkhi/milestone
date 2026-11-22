@@ -1,0 +1,224 @@
+#+TITLE: Milestone; Backward DP
+#+AUTHOR: Komeil Parseh
+#+EMAIL: "komeilparseh@disroot.org"
+#+OPTIONS: toc:2 num:t
+
+* Overview
+
+*Milestone* (also titled *Backward DP*) is an educational tool for
+formulating and solving finite-horizon, discrete-time optimal control
+problems using *backward dynamic programming* (DP) and forward
+trajectory rollout.
+
+Problems are written in a declarative domain-specific language (DSL),
+compiled and semantically validated in OCaml, solved over discretized
+state and control grids, and inspected through a lightweight web
+interface.
+
+** Scope and Focus
+The project is designed for low-dimensional discrete-time control
+systems (1D and 2D state spaces with 1D control) with algebraic
+dynamics and cost expressions. It prioritizes clarity, correctness,
+and pedagogical value over heavy tooling or high-dimensional numerical
+approximations.
+
+* How It Works
+
+** Backward Dynamic Programming
+For a discrete-time problem over a finite horizon $N$ with state
+transition $x_{k+1} = f(x_k, u_k)$, running cost $\ell(x_k, u_k)$, and terminal
+cost $\Phi(x_N)$:
+
+1. *Terminal Initialization ($k = N$):* Evaluate the terminal cost $\Phi$
+   across the discretized state grid to obtain the value function
+   $V_N$.
+2. *Backward Recursion ($k = N-1, \dots, 0$):* At each step and each state
+   grid point, evaluate candidate control values from the discretized
+   control set, interpolate the next-step value function $V_{k+1}$ on the
+   state grid when needed, and record both the minimum cost-to-go $V_k$
+   and the corresponding optimal control action.
+3. *Forward Rollout:* Starting from the specified initial state $x_0$,
+   step forward from $k = 0$ to $N-1$ by applying the optimal control
+   policy and advancing the state dynamics to produce the state and
+   control trajectories.
+
+** DSL Compilation Pipeline
+The DSL front-end in OCaml processes input text in four stages:
+- *Lexing:* Tokenizes keywords, identifiers, numbers, operators,
+  delimiters, and comments (~#~ and ~//~).
+- *Parsing:* Builds an abstract syntax tree (AST) using a
+  recursive-descent parser and expression parser respecting operator
+  precedence and right-associative exponentiation (~^~).
+- *Semantic Validation:* Checks state/control counts, presence of
+  required dynamics and initial state entries, valid bounds (~lo < hi~),
+  positive horizon, matching state grid dimensions, valid grid/control
+  resolutions, and declaration of all referenced variables.
+- *Compilation:* Evaluates parameters, constructs closure-based dynamics
+  and cost functions, builds state/control grids, and returns a
+  compiled problem or a descriptive error message.
+
+* DSL Reference
+
+Each problem is enclosed in a ~problem <Name> ... end_problem~
+block. Sections inside a problem block may appear in any order, though
+grouping them logically improves readability.
+
+** Supported Blocks and Syntax
+- ~state: <var1>[, <var2>]~ Declares state variables (1 or 2 state
+  variables in the current version).
+- ~control: <u_var>~ Declares the control variable (1 control variable
+  in the current version).
+- ~parameter:~ Declares constants/parameters as ~name = <expr>~ lines
+  until the next section begins.
+- ~dynamics: ... end_dynamics~ Specifies one state transition equation
+  per state variable using prime notation: ~x' = <expr>~.
+- ~initial: ... end_initial~ Specifies the initial value for each state
+  variable: ~x = <expr>~.
+- ~target: ... end_target~ Optional block parsed into the AST (~x =
+  <expr>~); target tracking in costs or rollout metrics is expressed
+  explicitly in the cost expressions when needed.
+- ~horizon: <int>~ Sets the finite time horizon ($\ge 1$).
+- ~bounds: ... end_bounds~ Specifies lower and upper bounds (~name in
+  [lo, hi]~ with ~lo < hi~) for every declared state and control
+  variable.
+- ~cost: ... end_cost~ Defines ~running = <expr>~ and/or ~terminal = <expr>~
+  (defaulting to ~0.0~ when omitted).
+- ~solve: ... end_solve~ Configures the solver:
+  - ~method = dynamic_programming~
+  - ~grid = [nx]~ (for 1D) or ~grid = [nx, ny]~ (for 2D), with each
+    resolution $\ge 2$
+  - ~controls = <int>~ (number of discrete control grid points, $\ge 2$)
+
+** Expression Language
+Expressions support integer and floating-point literals, declared
+identifiers (states, control, parameters), parentheses, unary negation
+(~-~), binary ~+~, ~-~, ~*~, ~/~, and right-associative power ~^~. Built-in math
+functions such as ~sin~, ~cos~, ~exp~, or ~abs~ are not yet included in the
+expression grammar.
+
+* Example Problems
+
+** 1D Thermal Regulation
+#+begin_src text
+problem RoomTemperatureControl
+    state:
+        T
+    control:
+        u
+    parameter:
+        dt = 0.2
+        alpha = 0.15
+        T_amb = 5.0
+        beta = 0.8
+        T_ref = 20.0
+        u_weight = 0.05
+        term_weight = 20.0
+    dynamics:
+        T' = T + dt * (-alpha * (T - T_amb) + beta * u)
+    end_dynamics
+    initial:
+        T = 10.0
+    end_initial
+    horizon: 25
+    bounds:
+        T in [0.0, 30.0]
+        u in [0.0, 10.0]
+    end_bounds
+    cost:
+        running = (T - T_ref)^2 + u_weight * u^2
+        terminal = term_weight * (T - T_ref)^2
+    end_cost
+    solve:
+        method = dynamic_programming
+        grid = [61]
+        controls = 21
+    end_solve
+end_problem
+#+end_src
+
+** 2D Damped Linear Motion
+#+begin_src text
+problem DampedPositioning2D
+    state:
+        x, v
+    control:
+        u
+    parameter:
+        dt = 0.1
+        b = 0.4
+        r = 0.1
+        q_term = 12.0
+    dynamics:
+        x' = x + dt * v
+        v' = v + dt * (-b * v + u)
+    end_dynamics
+    initial:
+        x = 4.0
+        v = -1.0
+    end_initial
+    horizon: 20
+    bounds:
+        x in [-6.0, 6.0]
+        v in [-5.0, 5.0]
+        u in [-3.0, 3.0]
+    end_bounds
+    cost:
+        running = x^2 + v^2 + r * u^2
+        terminal = q_term * (x^2 + v^2)
+    end_cost
+    solve:
+        method = dynamic_programming
+        grid = [31, 31]
+        controls = 15
+    end_solve
+end_problem
+#+end_src
+
+* Limitations and Design Notes
+
+- *Curse of Dimensionality:* Grid size grows exponentially with the
+  number of state variables. Tabular backward DP is practical here for
+  1D and 2D systems with moderate grid resolutions.
+- *Static vs. Dynamic Optimization:* Milestone targets sequential
+  decision-making with state dynamics over a time horizon rather than
+  static single-variable calculus optimization problems.
+- *Expression Scope:* Only basic arithmetic and power operators are
+  currently supported in DSL expressions; non-polynomial or piecewise
+  functions (such as ~abs~ or trigonometric functions) require smooth
+  algebraic approximations or host-language modeling.
+* Building
+
+** Prerequisites
+Install an OCaml toolchain (e.g., via ~opam~)
+
+** Build the OCaml Project
+From the project root, build the OCaml library, executables, and
+tests:
+
+#+begin_src sh
+dune build
+#+end_src
+
+Optionally, run the test suite:
+
+#+begin_src sh
+dune runtest
+#+end_src
+
+** Build the JavaScript Output (~bin_js~)
+Build the JavaScript target with ~dune~, you need [[https://github.com/ocsigen/js_of_ocaml][~json_of_ocaml~]] for
+this.
+#+begin_src sh
+  opam install js_of_ocaml js_of_ocaml-ppx
+  dune build bin_js/bridge_js.js
+#+end_src
+
+* AI Assistance Disclosure
+AI tools were used during development as an interactive assistant for
+drafting and refining documentation, exploring modeling and UI
+options, and reviewing design trade-offs. All problem formulations,
+mathematical interpretations, code changes, and verification on local
+test cases were reviewed and finalized by the author.
+
+* License
+This project is released under the BSD 2-Clause License. For more information, see the [[./LICENSE][LICENSE]] file.
