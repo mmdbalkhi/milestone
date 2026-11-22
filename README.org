@@ -1,0 +1,238 @@
+.#+TITLE: Milestone: Backward Dynamic Programming
+#+AUTHOR: Komeil Parseh
+#+EMAIL: komeilparseh@disroot.org
+#+LICENSE: BSD-2-Clause
+#+language: en
+#+OPTIONS: toc:2 author:t timestamp:t num:nil tags:nil
+#+STARTUP: content indent showall
+
+* Overview
+[[https://mmdbalkhi.ir/milestone][Live Demo]]
+
+Milestone is a lightweight, educational toolkit for solving
+finite-horizon, discrete-time optimal control problems. It uses
+backward dynamic programming (DP) to compute optimal trajectories from
+start to finish.
+
+You define your control problem using a simple, custom domain-specific
+language (DSL). The OCaml backend then compiles, validates, and solves
+it over discretized state and control grids, letting you inspect the
+resulting trajectories directly in a clean, lightweight web interface.
+
+** Scope and Focus
+I built this with low-dimensional systems (1D or 2D state spaces, 1D
+control) in mind. The goal isn't to compete with heavy-duty numerical
+solvers for high-dimensional spaces. Instead, it focuses on
+transparency, correctness, and giving you a clear, step-by-step view
+of how backward DP actually works under the hood.
+
+* How It Works
+
+** Backward Dynamic Programming
+Given a discrete-time problem over a finite horizon $N$ with state
+transition $x_{k+1} = f(x_k, u_k)$, running cost $\ell(x_k, u_k)$, and terminal
+cost $\Phi(x_N)$, the solver works in three passes:
+
+1. *Terminal Initialization ($k = N$):* It evaluates the terminal cost
+   $\Phi$ across the entire discretized state grid to establish the final
+   value function, $V_N$.
+2. *Backward Recursion ($k = N-1, \dots, 0$):* Working backward, it checks
+   every state grid point. For each point, it tests candidate control
+   values, interpolates the next-step value function $V_{k+1}$ when
+   necessary, and records both the minimum cost-to-go $V_k$ and the
+   optimal control action that achieved it.
+3. *Forward Rollout:* Starting from your specified initial state $x_0$,
+   it steps forward from $k = 0$ to $N-1$, applying the stored optimal
+   control policy at each step to generate the final state and control
+   trajectories.
+
+** The Compilation Pipeline
+Under the hood, the OCaml front-end processes your DSL text in four
+straightforward steps:
+- *Lexing:* Breaks the text down into keywords, identifiers, numbers,
+  operators, and comments (~#~ or ~//~).
+- *Parsing:* Builds an abstract syntax tree (AST) using a recursive-descent parser that respects standard operator precedence and right-associative exponentiation (~^~).
+- *Semantic Validation:* Checks that state/control counts are valid,
+  required blocks (like dynamics and initial states) are present,
+  bounds make sense (~lo < hi~), the horizon is positive, grid
+  dimensions match the state space, and all referenced variables are
+  actually declared.
+- *Compilation:* Evaluates constant parameters, constructs native OCaml
+  closures for the dynamics and cost functions, builds the discretized
+  grids, and returns either a ready-to-solve problem or a descriptive
+  error.
+
+* DSL Reference
+
+Every problem must be wrapped in a ~problem <Name> ... end_problem~
+block. While the internal sections can technically appear in any
+order, grouping them logically makes the code much easier to read.
+
+** Supported Blocks and Syntax
+- ~state: <var1>[, <var2>]~ :: Defines the state variables (currently
+  limited to 1 or 2).
+- ~control: <u_var>~ :: Defines the control variable (currently limited
+  to 1).
+- ~parameter:~ :: Declares constants. Write these as ~name = <expr>~ lines
+  until the next section starts.
+- ~dynamics: ... end_dynamics~ :: Specifies one state transition
+  equation per state variable using prime notation (e.g., ~x' =
+  <expr>~).
+- ~initial: ... end_initial~ :: Sets the starting value for each state
+  variable (e.g., ~x = <expr>~).
+- ~target: ... end_target~ :: An optional block parsed into the
+  AST. While it doesn't automatically enforce constraints, it's useful
+  for explicitly tracking target metrics in your cost expressions.
+- ~horizon: <int>~ :: Sets the finite time horizon (must be $\ge 1$).
+- ~bounds: ... end_bounds~ :: Defines hard lower and upper limits (~name
+  in [lo, hi]~ with ~lo < hi~) for every declared state and control
+  variable.
+- ~cost: ... end_cost~ :: Defines ~running = <expr>~ and/or ~terminal =
+  <expr>~. If omitted, they default to ~0.0~.
+- ~solve: ... end_solve~ :: Configures the solver behavior:
+  - ~method = dynamic_programming~
+  - ~grid = [nx]~ (for 1D) or ~grid = [nx, ny]~ (for 2D), where each
+    resolution is $\ge 2$.
+  - ~controls = <int>~ (number of discrete control grid points, $\ge 2$).
+
+** Expression Language
+The expression parser supports integer and floating-point literals,
+declared identifiers (states, controls, parameters), parentheses,
+unary negation (~-~), binary ~+~, ~-~, ~*~, ~/~, and right-associative powers
+(~^~).
+
+*Note:* Built-in math functions like ~sin~, ~cos~, ~exp~, or ~abs~ are not
+currently part of the grammar. You will need to approximate them
+algebraically or handle them in the host language if required.
+
+* Example Problems
+
+Here are a couple of ready-to-run examples to show how the syntax
+comes together in practice.
+
+** 1D Thermal Regulation
+#+begin_src text
+problem RoomTemperatureControl
+    state:
+        T
+    control:
+        u
+    parameter:
+        dt = 0.2
+        alpha = 0.15
+        T_amb = 5.0
+        beta =  “0.8
+        T_ref = 20.0
+        u_weight = 0.05
+        term_weight = 20.0
+    dynamics:
+        T' = T + dt * (-alpha * (T - T_amb) + beta * u)
+    end_dynamics
+    initial:
+        T = 10.0
+    end_initial
+    horizon: 25
+    bounds:
+        T in [0.0, 30.0]
+        u in [0.0, 10.0]
+    end_bounds
+    cost:
+        running = (T - T_ref)^2 + u_weight * u^2
+        terminal = term_weight * (T - T_ref)^2
+    end_cost
+    solve:
+        method = dynamic_programming
+        grid = [61]
+        controls = 21
+    end_solve
+end_problem
+#+end_src
+
+** 2D Damped Linear Motion
+#+begin_src text
+problem DampedPositioning2D
+    state:
+        x, v
+    control:
+        u
+    parameter:
+        dt = 0.1
+        b = 0.4
+        r = 0.1
+        q_term = 12.0
+    dynamics:
+        x' = x + dt * v
+        v' = v + dt * (-b * v + u)
+    end_dynamics
+    initial:
+        x = 4.0
+        v = -1.0
+    end_initial
+    horizon: 20
+    bounds:
+        x in [-6.0, 6.0]
+        v in [-5.0, 5.0]
+        u in [-3.0, 3.0]
+    end_bounds
+    cost:
+        running = x^2 + v^2 + r * u^2
+        terminal = q_term * (x^2 + v^2)
+    end_cost
+    solve:
+        method = dynamic_programming
+        grid = [31, 31]
+        controls = 15
+    end_solve
+end_problem
+#+end_src
+
+* Limitations and Design Notes
+
+- *The Curse of Dimensionality:* Because tabular backward DP scales
+  exponentially with the number of state variables, this tool is
+  strictly meant for 1D and 2D benchmarks with moderate grid
+  resolutions.
+- *Dynamic, Not Static:* Milestone is built for sequential
+  decision-making over a time horizon. It is not designed for static,
+  single-step calculus optimization.
+- *Expression Limits:* As mentioned, the DSL currently only supports
+  basic arithmetic and powers. Complex or piecewise functions require
+  algebraic approximation or host-language modeling.
+
+* Building
+
+** Prerequisites
+You'll need a working OCaml toolchain. The easiest way to get this is
+via [[https://opam.ocaml.org/][opam]].
+
+** Build the OCaml Project
+From the project root, build the library, executables, and tests:
+
+#+begin_src sh
+  dune build
+#+end_src
+
+Optionally, run the test suite to verify everything is working:
+
+#+begin_src sh
+  dune runtest
+#+end_src
+
+** Build the JavaScript Output (~bin_js~)
+To compile the OCaml core to JavaScript for the web interface, you'll
+need [[https://github.com/ocsigen/js_of_ocaml][js_of_ocaml]].
+
+#+begin_src sh
+  opam install js_of_ocaml js_of_ocaml-ppx
+  dune build bin_js/bridge_js.js
+#+end_src
+
+* Transparency Note
+I used AI tools as a sounding board during development—mostly for
+drafting documentation, UI layouts, and catching edge
+cases. However, every mathematical formulation, code change, and test
+verification was personally reviewed, refined, and finalized by me. 
+
+* License
+This project is released under the BSD 2-Clause License. For more
+information, see the [[./LICENSE][LICENSE]] file.  

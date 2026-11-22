@@ -1,0 +1,11 @@
+(executable
+ (public_name milestone)
+ (name main)
+ (modules main)
+ (libraries milestone))
+
+(executable
+ (public_name run_dsl)
+ (name run_dsl)
+ (modules run_dsl)
+ (libraries milestone))

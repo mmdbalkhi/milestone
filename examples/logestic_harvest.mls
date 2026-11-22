@@ -1,0 +1,28 @@
+problem LogisticHarvest
+  state: p
+  control: h
+  parameter:
+    r = 0.5
+    K = 100.0
+    dt = 0.5
+  dynamics:
+    p' = p + dt * (r * p * (1 - p / K) - h)
+  end_dynamics
+  initial:
+    p = 20
+  end_initial
+  horizon: 20
+  bounds:
+    p in [0, 120]
+    h in [0, 15]
+  end_bounds
+  cost:
+    running = (p - 50)^2 + 0.01 * h^2
+    terminal = (p - 50)^2
+  end_cost
+  solve:
+    method = dynamic_programming
+    grid = [61]
+    controls = 31
+  end_solve
+end_problem

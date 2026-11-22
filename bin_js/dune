@@ -1,0 +1,10 @@
+(executable
+ (name bridge_js)
+ (libraries milestone js_of_ocaml)
+ (preprocess (pps js_of_ocaml-ppx))
+ (modes byte))
+
+(rule
+ (target bridge_js.js)
+ (deps bridge_js.bc)
+ (action (run js_of_ocaml %{deps} -o %{target} --pretty)))

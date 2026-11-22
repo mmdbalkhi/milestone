@@ -1,0 +1,3 @@
+(library
+ (name milestone)
+ (libraries yojson))

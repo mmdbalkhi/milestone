@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 2026-11-23 Mon 21:54 -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>&lrm;</title>
+<meta name="author" content="Komeil Parseh" />
+<meta name="generator" content="Org Mode" />
+<script>
+  window.MathJax = {
+    tex: {
+      ams: {
+        multlineWidth: '85%'
+      },
+      tags: 'ams',
+      tagSide: 'right',
+      tagIndent: '.8em'
+    },
+    chtml: {
+      scale: 1.0,
+      displayAlign: 'center',
+      displayIndent: '0em'
+    },
+    svg: {
+      scale: 1.0,
+      displayAlign: 'center',
+      displayIndent: '0em'
+    },
+    output: {
+      font: 'mathjax-modern',
+      displayOverflow: 'overflow'
+    }
+  };
+</script>
+
+<script
+  id="MathJax-script"
+  async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
+</head>
+<body>
+<article id="content" class="content">
+<nav id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org7f16d57">Overview</a>
+<ul>
+<li><a href="#org99c01cb">Scope and Focus</a></li>
+</ul>
+</li>
+<li><a href="#orgee35afe">How It Works</a>
+<ul>
+<li><a href="#orgd98eb26">Backward Dynamic Programming</a></li>
+<li><a href="#org7925b9e">The Compilation Pipeline</a></li>
+</ul>
+</li>
+<li><a href="#org0ce0959">DSL Reference</a>
+<ul>
+<li><a href="#org9639605">Supported Blocks and Syntax</a></li>
+<li><a href="#org7f6f53b">Expression Language</a></li>
+</ul>
+</li>
+<li><a href="#orgb948b55">Example Problems</a>
+<ul>
+<li><a href="#org2dc1f56">1D Thermal Regulation</a></li>
+<li><a href="#orgfa898cb">2D Damped Linear Motion</a></li>
+</ul>
+</li>
+<li><a href="#org7161a33">Limitations and Design Notes</a></li>
+<li><a href="#org0c2fec5">Building</a>
+<ul>
+<li><a href="#org194cf40">Prerequisites</a></li>
+<li><a href="#orgff52af2">Build the OCaml Project</a></li>
+<li><a href="#org0b22235">Build the JavaScript Output (<code>bin_js</code>)</a></li>
+</ul>
+</li>
+<li><a href="#org8a1512e">Transparency Note</a></li>
+<li><a href="#orgf42ba8d">License</a></li>
+</ul>
+</div>
+</nav>
+<p>
+.#+TITLE: Milestone: Backward Dynamic Programming
+</p>
+<section id="outline-container-org7f16d57" class="outline-2">
+<h2 id="org7f16d57">Overview</h2>
+<div class="outline-text-2" id="text-org7f16d57">
+<p>
+<a href="https://mmdbalkhi.ir/milestone">Live Demo</a>
+</p>
+
+<p>
+Milestone is a lightweight, educational toolkit for solving
+finite-horizon, discrete-time optimal control problems. It uses
+backward dynamic programming (DP) to compute optimal trajectories from
+start to finish.
+</p>
+
+<p>
+You define your control problem using a simple, custom domain-specific
+language (DSL). The OCaml backend then compiles, validates, and solves
+it over discretized state and control grids, letting you inspect the
+resulting trajectories directly in a clean, lightweight web interface.
+</p>
+</div>
+<div id="outline-container-org99c01cb" class="outline-3">
+<h3 id="org99c01cb">Scope and Focus</h3>
+<div class="outline-text-3" id="text-org99c01cb">
+<p>
+I built this with low-dimensional systems (1D or 2D state spaces, 1D
+control) in mind. The goal isn't to compete with heavy-duty numerical
+solvers for high-dimensional spaces. Instead, it focuses on
+transparency, correctness, and giving you a clear, step-by-step view
+of how backward DP actually works under the hood.
+</p>
+</div>
+</div>
+</section>
+<section id="outline-container-orgee35afe" class="outline-2">
+<h2 id="orgee35afe">How It Works</h2>
+<div class="outline-text-2" id="text-orgee35afe">
+</div>
+<div id="outline-container-orgd98eb26" class="outline-3">
+<h3 id="orgd98eb26">Backward Dynamic Programming</h3>
+<div class="outline-text-3" id="text-orgd98eb26">
+<p>
+Given a discrete-time problem over a finite horizon \(N\) with state
+transition \(x_{k+1} = f(x_k, u_k)\), running cost \(\ell(x_k, u_k)\), and terminal
+cost \(\Phi(x_N)\), the solver works in three passes:
+</p>
+
+<ol class="org-ol">
+<li><b>Terminal Initialization (\(k = N\)):</b> It evaluates the terminal cost
+\(\Phi\) across the entire discretized state grid to establish the final
+value function, \(V_N\).</li>
+<li><b>Backward Recursion (\(k = N-1, \dots, 0\)):</b> Working backward, it checks
+every state grid point. For each point, it tests candidate control
+values, interpolates the next-step value function \(V_{k+1}\) when
+necessary, and records both the minimum cost-to-go \(V_k\) and the
+optimal control action that achieved it.</li>
+<li><b>Forward Rollout:</b> Starting from your specified initial state \(x_0\),
+it steps forward from \(k = 0\) to \(N-1\), applying the stored optimal
+control policy at each step to generate the final state and control
+trajectories.</li>
+</ol>
+</div>
+</div>
+<div id="outline-container-org7925b9e" class="outline-3">
+<h3 id="org7925b9e">The Compilation Pipeline</h3>
+<div class="outline-text-3" id="text-org7925b9e">
+<p>
+Under the hood, the OCaml front-end processes your DSL text in four
+straightforward steps:
+</p>
+<ul class="org-ul">
+<li><b>Lexing:</b> Breaks the text down into keywords, identifiers, numbers,
+operators, and comments (<code>#</code> or <code>//</code>).</li>
+<li><b>Parsing:</b> Builds an abstract syntax tree (AST) using a recursive-descent parser that respects standard operator precedence and right-associative exponentiation (<code>^</code>).</li>
+<li><b>Semantic Validation:</b> Checks that state/control counts are valid,
+required blocks (like dynamics and initial states) are present,
+bounds make sense (<code>lo &lt; hi</code>), the horizon is positive, grid
+dimensions match the state space, and all referenced variables are
+actually declared.</li>
+<li><b>Compilation:</b> Evaluates constant parameters, constructs native OCaml
+closures for the dynamics and cost functions, builds the discretized
+grids, and returns either a ready-to-solve problem or a descriptive
+error.</li>
+</ul>
+</div>
+</div>
+</section>
+<section id="outline-container-org0ce0959" class="outline-2">
+<h2 id="org0ce0959">DSL Reference</h2>
+<div class="outline-text-2" id="text-org0ce0959">
+<p>
+Every problem must be wrapped in a <code>problem &lt;Name&gt; ... end_problem</code>
+block. While the internal sections can technically appear in any
+order, grouping them logically makes the code much easier to read.
+</p>
+</div>
+<div id="outline-container-org9639605" class="outline-3">
+<h3 id="org9639605">Supported Blocks and Syntax</h3>
+<div class="outline-text-3" id="text-org9639605">
+<dl class="org-dl">
+<dt><code>state: &lt;var1&gt;[, &lt;var2&gt;]</code></dt><dd>Defines the state variables (currently
+limited to 1 or 2).</dd>
+<dt><code>control: &lt;u_var&gt;</code></dt><dd>Defines the control variable (currently limited
+to 1).</dd>
+<dt><code>parameter:</code></dt><dd>Declares constants. Write these as <code>name = &lt;expr&gt;</code> lines
+until the next section starts.</dd>
+<dt><code>dynamics: ... end_dynamics</code></dt><dd>Specifies one state transition
+equation per state variable using prime notation (e.g., <code>x' =
+  &lt;expr&gt;</code>).</dd>
+<dt><code>initial: ... end_initial</code></dt><dd>Sets the starting value for each state
+variable (e.g., <code>x = &lt;expr&gt;</code>).</dd>
+<dt><code>target: ... end_target</code></dt><dd>An optional block parsed into the
+AST. While it doesn't automatically enforce constraints, it's useful
+for explicitly tracking target metrics in your cost expressions.</dd>
+<dt><code>horizon: &lt;int&gt;</code></dt><dd>Sets the finite time horizon (must be \(\ge 1\)).</dd>
+<dt><code>bounds: ... end_bounds</code></dt><dd>Defines hard lower and upper limits (<code>name
+  in [lo, hi]</code> with <code>lo &lt; hi</code>) for every declared state and control
+variable.</dd>
+<dt><code>cost: ... end_cost</code></dt><dd>Defines <code>running = &lt;expr&gt;</code> and/or <code>terminal =
+  &lt;expr&gt;</code>. If omitted, they default to <code>0.0</code>.</dd>
+<dt><code>solve: ... end_solve</code></dt><dd>Configures the solver behavior:
+<ul class="org-ul">
+<li><code>method = dynamic_programming</code></li>
+<li><code>grid = [nx]</code> (for 1D) or <code>grid = [nx, ny]</code> (for 2D), where each
+resolution is \(\ge 2\).</li>
+<li><code>controls = &lt;int&gt;</code> (number of discrete control grid points, \(\ge 2\)).</li>
+</ul></dd>
+</dl>
+</div>
+</div>
+<div id="outline-container-org7f6f53b" class="outline-3">
+<h3 id="org7f6f53b">Expression Language</h3>
+<div class="outline-text-3" id="text-org7f6f53b">
+<p>
+The expression parser supports integer and floating-point literals,
+declared identifiers (states, controls, parameters), parentheses,
+unary negation (<code>-</code>), binary <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, and right-associative powers
+(<code>^</code>).
+</p>
+
+<p>
+<b>Note:</b> Built-in math functions like <code>sin</code>, <code>cos</code>, <code>exp</code>, or <code>abs</code> are not
+currently part of the grammar. You will need to approximate them
+algebraically or handle them in the host language if required.
+</p>
+</div>
+</div>
+</section>
+<section id="outline-container-orgb948b55" class="outline-2">
+<h2 id="orgb948b55">Example Problems</h2>
+<div class="outline-text-2" id="text-orgb948b55">
+<p>
+Here are a couple of ready-to-run examples to show how the syntax
+comes together in practice.
+</p>
+</div>
+<div id="outline-container-org2dc1f56" class="outline-3">
+<h3 id="org2dc1f56">1D Thermal Regulation</h3>
+<div class="outline-text-3" id="text-org2dc1f56">
+<div class="org-src-container">
+<pre class="src src-text"><code>problem RoomTemperatureControl
+    state:
+        T
+    control:
+        u
+    parameter:
+        dt = 0.2
+        alpha = 0.15
+        T_amb = 5.0
+        beta =  &#8220;0.8
+        T_ref = 20.0
+        u_weight = 0.05
+        term_weight = 20.0
+    dynamics:
+        T' = T + dt * (-alpha * (T - T_amb) + beta * u)
+    end_dynamics
+    initial:
+        T = 10.0
+    end_initial
+    horizon: 25
+    bounds:
+        T in [0.0, 30.0]
+        u in [0.0, 10.0]
+    end_bounds
+    cost:
+        running = (T - T_ref)^2 + u_weight * u^2
+        terminal = term_weight * (T - T_ref)^2
+    end_cost
+    solve:
+        method = dynamic_programming
+        grid = [61]
+        controls = 21
+    end_solve
+end_problem
+</code></pre>
+</div>
+</div>
+</div>
+<div id="outline-container-orgfa898cb" class="outline-3">
+<h3 id="orgfa898cb">2D Damped Linear Motion</h3>
+<div class="outline-text-3" id="text-orgfa898cb">
+<div class="org-src-container">
+<pre class="src src-text"><code>problem DampedPositioning2D
+    state:
+        x, v
+    control:
+        u
+    parameter:
+        dt = 0.1
+        b = 0.4
+        r = 0.1
+        q_term = 12.0
+    dynamics:
+        x' = x + dt * v
+        v' = v + dt * (-b * v + u)
+    end_dynamics
+    initial:
+        x = 4.0
+        v = -1.0
+    end_initial
+    horizon: 20
+    bounds:
+        x in [-6.0, 6.0]
+        v in [-5.0, 5.0]
+        u in [-3.0, 3.0]
+    end_bounds
+    cost:
+        running = x^2 + v^2 + r * u^2
+        terminal = q_term * (x^2 + v^2)
+    end_cost
+    solve:
+        method = dynamic_programming
+        grid = [31, 31]
+        controls = 15
+    end_solve
+end_problem
+</code></pre>
+</div>
+</div>
+</div>
+</section>
+<section id="outline-container-org7161a33" class="outline-2">
+<h2 id="org7161a33">Limitations and Design Notes</h2>
+<div class="outline-text-2" id="text-org7161a33">
+<ul class="org-ul">
+<li><b>The Curse of Dimensionality:</b> Because tabular backward DP scales
+exponentially with the number of state variables, this tool is
+strictly meant for 1D and 2D benchmarks with moderate grid
+resolutions.</li>
+<li><b>Dynamic, Not Static:</b> Milestone is built for sequential
+decision-making over a time horizon. It is not designed for static,
+single-step calculus optimization.</li>
+<li><b>Expression Limits:</b> As mentioned, the DSL currently only supports
+basic arithmetic and powers. Complex or piecewise functions require
+algebraic approximation or host-language modeling.</li>
+</ul>
+</div>
+</section>
+<section id="outline-container-org0c2fec5" class="outline-2">
+<h2 id="org0c2fec5">Building</h2>
+<div class="outline-text-2" id="text-org0c2fec5">
+</div>
+<div id="outline-container-org194cf40" class="outline-3">
+<h3 id="org194cf40">Prerequisites</h3>
+<div class="outline-text-3" id="text-org194cf40">
+<p>
+You'll need a working OCaml toolchain. The easiest way to get this is
+via <a href="https://opam.ocaml.org/">opam</a>.
+</p>
+</div>
+</div>
+<div id="outline-container-orgff52af2" class="outline-3">
+<h3 id="orgff52af2">Build the OCaml Project</h3>
+<div class="outline-text-3" id="text-orgff52af2">
+<p>
+From the project root, build the library, executables, and tests:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><code>dune build
+</code></pre>
+</div>
+
+<p>
+Optionally, run the test suite to verify everything is working:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><code>dune runtest
+</code></pre>
+</div>
+</div>
+</div>
+<div id="outline-container-org0b22235" class="outline-3">
+<h3 id="org0b22235">Build the JavaScript Output (<code>bin_js</code>)</h3>
+<div class="outline-text-3" id="text-org0b22235">
+<p>
+To compile the OCaml core to JavaScript for the web interface, you'll
+need <a href="https://github.com/ocsigen/js_of_ocaml">js<sub>of</sub><sub>ocaml</sub></a>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><code>opam install js_of_ocaml js_of_ocaml-ppx
+dune build bin_js/bridge_js.js
+</code></pre>
+</div>
+</div>
+</div>
+</section>
+<section id="outline-container-org8a1512e" class="outline-2">
+<h2 id="org8a1512e">Transparency Note</h2>
+<div class="outline-text-2" id="text-org8a1512e">
+<p>
+I used AI tools as a sounding board during development—mostly for
+drafting documentation, UI layouts, and catching edge
+cases. However, every mathematical formulation, code change, and test
+verification was personally reviewed, refined, and finalized by me. 
+</p>
+</div>
+</section>
+<section id="outline-container-orgf42ba8d" class="outline-2">
+<h2 id="orgf42ba8d">License</h2>
+<div class="outline-text-2" id="text-orgf42ba8d">
+<p>
+This project is released under the BSD 2-Clause License. For more
+information, see the <a href="./LICENSE">LICENSE</a> file.  
+</p>
+</div>
+</section>
+</article>
+<footer id="postamble" class="status">
+<p class="author">Author: Komeil Parseh</p>
+<p class="date">Created: 2026-11-23 Mon 21:54</p>
+</footer>
+</body>
+</html>

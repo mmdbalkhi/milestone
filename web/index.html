@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Backward DP Optimal Control Lab</title>
+    <script src="/bridge_js.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/one-dark.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --card-bg: #ffffff;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --border: #e2e8f0;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          "Inter",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding: 24px;
+        line-height: 1.5;
+      }
+      .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 24px;
+      }
+      @media (max-width: 900px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.05),
+          0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border);
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .subtitle {
+        font-size: 0.95rem;
+        color: var(--text-muted);
+        line-height: 1.6;
+        padding-left: 12px;
+        border-left: 3px solid var(--primary);
+        margin-bottom: 24px;
+      }
+
+      h2 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+      h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+      }
+
+      .CodeMirror {
+        height: 380px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .CodeMirror-focused {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+      }
+
+      .row {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      button {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      button:hover {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+      }
+      button:active {
+        transform: translateY(0);
+      }
+      button:disabled {
+        background: var(--text-muted);
+        cursor: not-allowed;
+        transform: none;
+      }
+      button.secondary {
+        background: white;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      button.secondary:hover {
+        background: var(--bg);
+      }
+
+      .status-bar {
+        margin-top: 16px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        display: none;
+        white-space: pre-wrap;
+      }
+      .status-bar.error {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        display: block;
+      }
+      .status-bar.success {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+        display: block;
+      }
+      .status-bar.info {
+        background: #eff6ff;
+        color: #1e40af;
+        border: 1px solid #bfdbfe;
+        display: block;
+      }
+
+      .summary-strip {
+        display: none;
+        gap: 24px;
+        padding: 12px 16px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-top: 16px;
+        font-size: 0.9rem;
+        color: #334155;
+        flex-wrap: wrap;
+      }
+      .summary-strip span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .summary-strip strong {
+        color: var(--text);
+      }
+
+      .chart-wrap {
+        position: relative;
+        height: 280px;
+        margin-top: 16px;
+      }
+
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      /* --- Collapsible Info Sections --- */
+      .info-section {
+        margin-top: 32px;
+        border-top: 1px solid var(--border);
+        padding-top: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      details {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          border-color 0.2s;
+      }
+      details:hover {
+        background: #f1f5f9;
+      }
+      details[open] {
+        background: #ffffff;
+        border-color: var(--primary);
+      }
+      summary {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text);
+        outline: none;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      summary::-webkit-details-marker {
+        display: none;
+      }
+      summary::before {
+        content: "▶";
+        font-size: 0.7rem;
+        transition: transform 0.2s;
+        color: var(--text-muted);
+      }
+      details[open] summary::before {
+        transform: rotate(90deg);
+      }
+
+      .details-content {
+        margin-top: 12px;
+        padding-left: 8px;
+      }
+      .details-content ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style-type: disc;
+      }
+      .details-content ul ul {
+        margin-top: 8px;
+        margin-bottom: 8px;
+        list-style-type: circle;
+      }
+      .details-content li {
+        margin-bottom: 8px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        line-height: 1.6;
+      }
+      .details-content li:last-child {
+        margin-bottom: 0;
+      }
+      .details-content code {
+        background: #e2e8f0;
+        color: #0f172a;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+
+      /* --- Toast Pop-up --- */
+      .toast {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        max-width: 400px;
+        padding: 16px 20px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        box-shadow:
+          0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        transform: translateX(120%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
+        white-space: pre-wrap;
+      }
+      .toast.show {
+        transform: translateX(0);
+      }
+      .toast.error-toast {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+      }
+      .toast.success-toast {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+      }
+      .cm-keyword {
+        color: #c678dd;
+        font-weight: bold;
+      }
+      .cm-variable {
+        color: #e06c75;
+      }
+      .cm-variable-2 {
+        color: #e5c07b;
+        font-style: italic;
+      }
+      .cm-number {
+        color: #d19a66;
+      }
+      .cm-operator {
+        color: #56b6c2;
+      }
+      .cm-string {
+        color: #98c379;
+      }
+      .cm-comment {
+        color: #5c6370;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Toast Container -->
+    <div id="error-toast" class="toast error-toast"></div>
+
+    <div class="container">
+      <!-- Left Panel: Editor -->
+      <div class="card">
+        <h1>Backward DP Optimal Control Lab</h1>
+        <p class="subtitle">
+          Finite-horizon discrete-time optimal control via backward dynamic
+          programming and a domain-specific language
+        </p>
+
+        <div class="row" style="margin-top: 0; margin-bottom: 12px">
+          <button class="secondary preset-btn" data-preset="doubleIntegrator">
+            Double Integrator
+          </button>
+          <button class="secondary preset-btn" data-preset="simpleIntegrator">
+            1D Integrator
+          </button>
+          <button class="secondary preset-btn" data-preset="invalidDsl">
+            Invalid DSL (Test)
+          </button>
+        </div>
+
+        <h2>DSL Source</h2>
+        <textarea id="dsl" style="display: none"></textarea>
+
+        <div class="row">
+          <button id="solve">Solve</button>
+          <button id="download-csv" class="secondary" style="display: none">
+            Download CSV
+          </button>
+        </div>
+        <div id="status" class="status-bar"></div>
+      </div>
+
+      <!-- Right Panel: Results -->
+      <div class="card">
+        <h2>Results</h2>
+
+        <!-- Solve Results (Moved to Top) -->
+        <div id="error" class="status-bar error"></div>
+        <div id="ok" class="status-bar success"></div>
+        <div id="summary" class="summary-strip"></div>
+
+        <div id="charts" style="display: none">
+          <div style="display: flex; gap: 16px; flex-wrap: wrap">
+            <div class="chart-wrap" style="flex: 1; min-width: 280px">
+              <canvas id="stateChart"></canvas>
+            </div>
+            <div class="chart-wrap" style="flex: 1; min-width: 280px">
+              <canvas id="controlChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Collapsible Educational Sections (Moved to Bottom) -->
+        <div class="info-section">
+          <h3>Learn More</h3>
+
+          <details>
+            <summary>DSL Quick Guide & Syntax</summary>
+            <div class="details-content">
+              <ul>
+                <li>
+                  Wrap each problem inside
+                  <code>problem &lt;Name&gt; ... end_problem</code> (<code
+                    >#</code
+                  >
+                  or <code>//</code> for comments).
+                </li>
+                <li>
+                  Currently v1.0 supports 1 or 2 state variables and 1 control
+                  variable.
+                </li>
+                <li>
+                  Supported operators: <code>+</code>, <code>-</code>,
+                  <code>*</code>, <code>/</code>, unary <code>-</code>,
+                  right-associative <code>^</code>, parentheses, and numeric
+                  literals (no built-in math functions yet).
+                </li>
+                <li>
+                  <strong>Key blocks:</strong>
+                  <ul>
+                    <li>
+                      <code>state:</code> and
+                      <code>control:</code> (comma-separated names)
+                    </li>
+                    <li><code>parameter:</code> (name = &lt;expr&gt; lines)</li>
+                    <li>
+                      <code>dynamics: ... end_dynamics</code> (var' =
+                      &lt;expr&gt; per state)
+                    </li>
+                    <li>
+                      <code>initial: ... end_initial</code> (var = &lt;expr&gt;
+                      per state; <code>target: ... end_target</code> is parsed
+                      in the AST)
+                    </li>
+                    <li><code>horizon:</code> &lt;int&gt; (&gt;= 1)</li>
+                    <li>
+                      <code>bounds: ... end_bounds</code> (var in [lo, hi] with
+                      lo &lt; hi for all state/control variables)
+                    </li>
+                    <li>
+                      <code>cost: ... end_cost</code> (optional
+                      <code>running = &lt;expr&gt;</code> and
+                      <code>terminal = &lt;expr&gt;</code>)
+                    </li>
+                    <li>
+                      <code>solve: ... end_solve</code> (method =
+                      dynamic_programming, grid = [nx] or [nx, ny] with counts
+                      &gt;= 2, and controls = &lt;int&gt; &gt;= 2)
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </details>
+
+          <details>
+            <summary>How Backward DP & Rollout Work</summary>
+            <div class="details-content">
+              <ul>
+                <li>
+                  For a discrete-time optimal control problem over a finite
+                  horizon N, the solver works backward from k = N to k = 0.
+                </li>
+                <li>
+                  It initializes the terminal cost on the discretized state
+                  grid.
+                </li>
+                <li>
+                  At each step, it minimizes the sum of the running cost and the
+                  interpolated next-step value function across admissible
+                  control values.
+                </li>
+                <li>
+                  Once the value table is computed, a forward rollout starts
+                  from x_0 and applies the optimal control at each step to
+                  recover the state and control trajectories.
+                </li>
+              </ul>
+            </div>
+          </details>
+
+          <details>
+            <summary>DSL Syntax & Semantic Validation</summary>
+            <div class="details-content">
+              <ul>
+                <li>
+                  Problems are specified declaratively inside a
+                  <code>problem ... end_problem</code> block.
+                </li>
+                <li>
+                  Sections include: state, control, parameter, dynamics (x' =
+                  ...), initial, horizon, bounds, cost (running and terminal),
+                  and solve settings.
+                </li>
+                <li>
+                  Before running the solver, the compiler checks state/control
+                  counts, interval validity (lo &lt; hi), matching grid
+                  dimensions, and ensures all variables used in expressions are
+                  declared.
+                </li>
+              </ul>
+            </div>
+          </details>
+
+          <details>
+            <summary>Grid Discretization & Curse of Dimensionality</summary>
+            <div class="details-content">
+              <ul>
+                <li>
+                  Solution accuracy depends on state and control grid
+                  resolution, time step dt, and grid interpolation.
+                </li>
+                <li>
+                  Because the number of grid points grows exponentially with
+                  state dimension—known as the
+                  <em>curse of dimensionality</em>—tabular backward dynamic
+                  programming is well suited for low-dimensional systems.
+                </li>
+                <li>
+                  1D and 2D benchmarks (such as the Double Integrator) perform
+                  well, but it becomes computationally expensive in higher
+                  dimensions.
+                </li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/index.ts"></script>
+  </body>
+</html>
