@@ -1,215 +1,325 @@
-// web/src/ui.ts
+import { Chart, registerables, type ChartOptions } from "chart.js";
 import type { SolveResult } from "./bridge";
 
+Chart.register(...registerables);
+
+export interface ResultNames {
+  stateNames?: string[];
+  controlNames?: string[];
+}
+
 interface DomRefs {
-  editor: any;
   errorBox: HTMLElement;
   okBox: HTMLElement;
   summaryBox: HTMLElement;
   chartsContainer: HTMLElement;
   statusBox: HTMLElement;
+  emptyState: HTMLElement;
   stateCanvas: HTMLCanvasElement;
   controlCanvas: HTMLCanvasElement;
 }
 
-let stateChart: any = null;
-let controlChart: any = null;
+type StatusKind = "success" | "error" | "info";
 
-function getChart() {
-  const Chart = (window as any).Chart;
-  if (!Chart) throw new Error("Chart.js not loaded. Check CDN connection.");
-  return Chart;
-}
+let stateChart: Chart<"line"> | null = null;
+let controlChart: Chart<"line"> | null = null;
 
-const chartOptions = {
+const colors = [
+  "#2563eb",
+  "#16a34a",
+  "#f59e0b",
+  "#dc2626",
+  "#7c3aed",
+  "#0891b2",
+];
+
+const baseChartOptions: ChartOptions<"line"> = {
   responsive: true,
   maintainAspectRatio: false,
-  animation: { duration: 400 },
-  interaction: { mode: "index" as const, intersect: false },
+  animation: {
+    duration: 250,
+  },
+  interaction: {
+    mode: "index",
+    intersect: false,
+  },
   plugins: {
     legend: {
-      position: "top" as const,
+      position: "top",
       labels: {
         usePointStyle: true,
         boxWidth: 8,
-        font: { size: 12 },
-        // Explicitly enable click-to-toggle (default, but good to be explicit)
-        onClick: function (this: any, legendItem: any, legend: any) {
-          const index = legendItem.datasetIndex;
-          const ci = legend.chart;
-          if (ci.isDatasetVisible(index)) {
-            ci.hide(index);
-            legendItem.hidden = true;
-          } else {
-            ci.show(index);
-            legendItem.hidden = false;
-          }
+        font: {
+          size: 12,
         },
       },
     },
     tooltip: {
-      backgroundColor: "rgba(15, 23, 42, 0.9)",
+      backgroundColor: "rgba(15, 23, 42, 0.92)",
       padding: 12,
       cornerRadius: 8,
-      titleFont: { size: 13 },
-      bodyFont: { size: 12 },
-    },
-  },
-  scales: {
-    x: {
-      grid: { color: "#f1f5f9" },
-      title: {
-        display: true,
-        text: "Time (s)",
-        color: "#64748b",
-        font: { size: 12, weight: "bold" },
+      titleFont: {
+        size: 13,
       },
-    },
-    y: {
-      grid: { color: "#f1f5f9" },
-      title: {
-        display: true,
-        color: "#64748b",
-        font: { size: 12, weight: "bold" },
+      bodyFont: {
+        size: 12,
       },
     },
   },
 };
 
+function createLineChart(
+  canvas: HTMLCanvasElement,
+  yTitle: string,
+): Chart<"line"> {
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error(`Could not get 2D canvas context for ${canvas.id}.`);
+  }
+
+  return new Chart(context, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [],
+    },
+    options: {
+      ...baseChartOptions,
+      scales: {
+        x: {
+          grid: {
+            color: "#e2e8f0",
+          },
+          title: {
+            display: true,
+            text: "Time",
+            color: "#64748b",
+            font: {
+              size: 12,
+              weight: "bold",
+            },
+          },
+        },
+        y: {
+          grid: {
+            color: "#e2e8f0",
+          },
+          title: {
+            display: true,
+            text: yTitle,
+            color: "#64748b",
+            font: {
+              size: 12,
+              weight: "bold",
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+function formatNumber(value: number): string {
+  if (!Number.isFinite(value)) return String(value);
+  if (Number.isInteger(value)) return String(value);
+
+  return value.toFixed(4).replace(/\.?0+$/, "");
+}
+
+function makeNames(
+  provided: string[] | undefined,
+  count: number,
+  prefix: string,
+): string[] {
+  return Array.from({ length: count }, (_, index) => {
+    return provided?.[index] || `${prefix}_${index}`;
+  });
+}
+
+function makeDataset(label: string, data: Array<number | null>, color: string) {
+  return {
+    label,
+    data,
+    borderColor: color,
+    backgroundColor: `${color}22`,
+    borderWidth: 2,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    tension: 0.25,
+  };
+}
+
+function metric(label: string, value: string): HTMLElement {
+  const wrapper = document.createElement("div");
+  wrapper.className = "metric";
+
+  const labelElement = document.createElement("span");
+  labelElement.className = "metric-label";
+  labelElement.textContent = label;
+
+  const valueElement = document.createElement("span");
+  valueElement.className = "metric-value";
+  valueElement.textContent = value;
+
+  wrapper.append(labelElement, valueElement);
+
+  return wrapper;
+}
+
 export function initUI(refs: DomRefs) {
   const {
-    editor,
     errorBox,
     okBox,
     summaryBox,
     chartsContainer,
     statusBox,
+    emptyState,
     stateCanvas,
     controlCanvas,
   } = refs;
 
-  const Chart = getChart();
+  stateChart = createLineChart(stateCanvas, "State");
+  controlChart = createLineChart(controlCanvas, "Control");
 
-  stateChart = new Chart(stateCanvas.getContext("2d"), {
-    type: "line",
-    data: { labels: [], datasets: [] },
-    options: {
-      ...chartOptions,
-      scales: {
-        ...chartOptions.scales,
-        y: {
-          ...chartOptions.scales.y,
-          title: { display: true, text: "State" },
-        },
-      },
-    },
-  });
+  function showStatus(kind: StatusKind, message: string): void {
+    statusBox.className = `status-bar ${kind}`;
+    statusBox.textContent = message;
+    statusBox.hidden = false;
+  }
 
-  controlChart = new Chart(controlCanvas.getContext("2d"), {
-    type: "line",
-    data: { labels: [], datasets: [] },
-    options: {
-      ...chartOptions,
-      scales: {
-        ...chartOptions.scales,
-        y: {
-          ...chartOptions.scales.y,
-          title: { display: true, text: "Control" },
-        },
-      },
-    },
-  });
+  function hideOutput(): void {
+    errorBox.hidden = true;
+    okBox.hidden = true;
+    summaryBox.hidden = true;
+    chartsContainer.hidden = true;
+    statusBox.hidden = true;
+  }
 
-  function renderResults(result: SolveResult) {
-    chartsContainer.style.display = "none";
-    errorBox.style.display = "none";
-    okBox.style.display = "none";
-    summaryBox.style.display = "none";
-    statusBox.style.display = "none";
+  function clearCharts(): void {
+    if (stateChart) {
+      stateChart.data.labels = [];
+      stateChart.data.datasets = [];
+      stateChart.update();
+    }
+
+    if (controlChart) {
+      controlChart.data.labels = [];
+      controlChart.data.datasets = [];
+      controlChart.update();
+    }
+  }
+
+  function clearResults(): void {
+    hideOutput();
+    clearCharts();
+    emptyState.hidden = false;
+  }
+
+  function beginSolve(): void {
+    hideOutput();
+    emptyState.hidden = true;
+    showStatus("info", "Solving…");
+  }
+
+  function resizeCharts(): void {
+    requestAnimationFrame(() => {
+      stateChart?.resize();
+      controlChart?.resize();
+    });
+  }
+
+  function renderResults(result: SolveResult, names: ResultNames = {}): void {
+    hideOutput();
+    emptyState.hidden = true;
 
     if (result.status === "error") {
-      statusBox.className = "status-bar error";
-      statusBox.textContent = `[${result.stage?.toUpperCase()}] ${result.message}`;
-      statusBox.style.display = "block";
+      const stage = result.stage ? `[${result.stage.toUpperCase()}] ` : "";
+      showStatus("error", `${stage}${result.message ?? "Unknown error."}`);
       return;
     }
 
-    const r = result.result!;
+    const trajectory = result.result;
 
-    // Update Summary Strip
-    const finalState = r.states[r.steps];
-    const stateStr = finalState.map((v: number) => v.toFixed(3)).join(", ");
-    summaryBox.innerHTML = `
-      <span><strong>Steps:</strong> ${r.steps}</span>
-      <span><strong>dt:</strong> ${r.dt}</span>
-      <span><strong>Final State:</strong> [${stateStr}]</span>
-    `;
-    summaryBox.style.display = "flex";
+    if (
+      !trajectory ||
+      !Array.isArray(trajectory.time) ||
+      !Array.isArray(trajectory.states) ||
+      !Array.isArray(trajectory.controls)
+    ) {
+      showStatus("error", "Solver returned no trajectory.");
+      return;
+    }
 
-    statusBox.className = "status-bar success";
-    statusBox.textContent = `Solved "${result.problem_name}" successfully.`;
-    statusBox.style.display = "block";
-    chartsContainer.style.display = "block";
+    const finalState = trajectory.states[trajectory.states.length - 1] ?? [];
+    const stateNames = makeNames(
+      names.stateNames,
+      trajectory.states[0]?.length ?? 0,
+      "state",
+    );
+    const controlNames = makeNames(
+      names.controlNames,
+      trajectory.controls[0]?.length ?? 0,
+      "control",
+    );
 
-    const labels = r.time.map((t: number) => t.toFixed(2));
-    const xs = r.states.map((s: number[]) => s[0]);
-    const vs =
-      r.states.length > 0 && r.states[0].length > 1
-        ? r.states.map((s: number[]) => s[1])
-        : [];
-    const us = r.controls.map((c: number[]) => c[0]);
+    const finalStateText = finalState
+      .map((value, index) => `${stateNames[index]}=${formatNumber(value)}`)
+      .join(", ");
 
-    // Update State Chart
-    stateChart.data = {
-      labels,
-      datasets: [
-        {
-          label: "x (position)",
-          data: xs,
-          borderColor: "#2563eb",
-          backgroundColor: "#2563eb22",
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.3,
-        },
-        ...(vs.length > 0
-          ? [
-              {
-                label: "v (velocity)",
-                data: vs,
-                borderColor: "#10b981",
-                backgroundColor: "#10b98122",
-                borderWidth: 2,
-                pointRadius: 0,
-                tension: 0.3,
-              },
-            ]
-          : []),
-      ],
-    };
-    stateChart.update();
+    summaryBox.replaceChildren(
+      metric("Problem", result.problem_name ?? "—"),
+      metric("Steps", String(trajectory.steps)),
+      metric("dt", formatNumber(trajectory.dt)),
+      metric("Final State", `[${finalStateText}]`),
+    );
 
-    // Update Control Chart
-    controlChart.data = {
-      labels,
-      datasets: [
-        {
-          label: "u (control)",
-          data: us,
-          borderColor: "#f59e0b",
-          backgroundColor: "#f59e0b22",
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.1, // Step-like appearance for DP controls
-        },
-      ],
-    };
-    controlChart.update();
+    summaryBox.hidden = false;
+    chartsContainer.hidden = false;
+
+    showStatus(
+      "success",
+      `Solved "${result.problem_name ?? "problem"}" successfully.`,
+    );
+
+    const labels = trajectory.time.map((time) => formatNumber(time));
+
+    const stateDatasets = stateNames.map((name, index) => {
+      return makeDataset(
+        name,
+        trajectory.states.map((state) => state[index] ?? null),
+        colors[index % colors.length],
+      );
+    });
+
+    const controlDatasets = controlNames.map((name, index) => {
+      return makeDataset(
+        name,
+        trajectory.controls.map((control) => control[index] ?? null),
+        colors[(index + 2) % colors.length],
+      );
+    });
+
+    if (stateChart) {
+      stateChart.data.labels = labels;
+      stateChart.data.datasets = stateDatasets;
+      stateChart.update();
+    }
+
+    if (controlChart) {
+      controlChart.data.labels = labels;
+      controlChart.data.datasets = controlDatasets;
+      controlChart.update();
+    }
+
+    resizeCharts();
   }
 
   return {
     renderResults,
-    getValue: () => editor.getValue(),
-    setValue: (val: string) => editor.setValue(val),
+    clearResults,
+    beginSolve,
+    showStatus,
+    resizeCharts,
   };
 }

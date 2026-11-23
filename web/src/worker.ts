@@ -1,31 +1,52 @@
-// web/src/worker.ts
-// Runs the OCaml solver off the main thread.
+import type { SolveResult, WorkerRequest, WorkerResponse } from "./bridge";
 
-// Load the OCaml bridge into the worker context.
-// Note: importScripts only works in classic workers (no { type: "module" }).
-importScripts("/bridge_js.js");
+interface MilestoneApi {
+  solve_from(dslSource: string): string;
+}
 
-self.addEventListener("message", (event: MessageEvent) => {
-  const { id, dslSource } = event.data;
+interface WorkerScope {
+  importScripts?: (...urls: string[]) => void;
+  postMessage(message: WorkerResponse): void;
+  addEventListener(
+    type: "message",
+    listener: (event: MessageEvent<WorkerRequest>) => void,
+  ): void;
+  Milestone?: MilestoneApi;
+}
+
+const scope = self as unknown as WorkerScope;
+
+if (typeof scope.importScripts !== "function") {
+  throw new Error("This worker must be loaded as a classic worker.");
+}
+
+scope.importScripts("/bridge_js.js");
+
+scope.addEventListener("message", (event) => {
+  const { id, dslSource, type } = event.data;
+
+  if (typeof id !== "number") return;
+
   try {
-    // globalThis refers to the worker's global scope
-    const workerGlobal = globalThis as unknown as {
-      Milestone?: { solve_from: (s: string) => string };
-    };
-
-    if (!workerGlobal.Milestone) {
-      throw new Error(
-        "OCaml bridge not loaded. Ensure bridge_js.js is in web/public/ and accessible at /bridge_js.js",
-      );
+    if (typeof dslSource !== "string") {
+      throw new Error("DSL source must be a string.");
     }
 
-    const rawJson = workerGlobal.Milestone.solve_from(dslSource);
-    const result = JSON.parse(rawJson);
-    self.postMessage({ id, result });
-  } catch (err) {
-    self.postMessage({
+    if (!scope.Milestone) {
+      throw new Error("OCaml bridge not loaded in worker.");
+    }
+
+    const rawJson = scope.Milestone.solve_from(dslSource);
+    const result = JSON.parse(rawJson) as SolveResult;
+
+    scope.postMessage({ id, type, result });
+  } catch (error) {
+    scope.postMessage({
       id,
-      error: { message: err instanceof Error ? err.message : String(err) },
+      type,
+      error: {
+        message: error instanceof Error ? error.message : String(error),
+      },
     });
   }
 });

@@ -10,12 +10,26 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/codemirror": "^5.60.18",
     "@vitejs/plugin-legacy": "^8.2.4",
     "typescript": "^5.0.0",
     "vite": "^8.3.8"
   },
   "dependencies": {
-    "chart.js": "^4.4.0"
+    "@codemirror/autocomplete": "^6.20.4",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/lint": "^6.9.8",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@lezer/highlight": "^1.2.5",
+    "chart.js": "^4.6.1"
   },
-  "description": "Web frontend for Control Lab OCaml DP solver (WASM bridge via solve_from_dsl)"
+  "description": "Web frontend for Control Lab OCaml DP solver (WASM bridge via solve_from_dsl)",
+  "allowScripts": {
+    "core-js@3.51.0": true
+  }
 }
