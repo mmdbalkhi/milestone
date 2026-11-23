@@ -1,0 +1,32 @@
+problem CruiseControl
+  state: x, v
+  control: u
+  parameter:
+    dt = 0.2
+    drag = 0.08
+    target_speed = 20.0
+    u_weight = 0.5
+  dynamics:
+    x' = x + dt * v
+    v' = v + dt * (u - drag * v)
+  end_dynamics
+  initial:
+    x = 0.0
+    v = 5.0
+  end_initial
+  horizon: 25
+  bounds:
+    x in [0.0, 150.0]
+    v in [0.0, 30.0]
+    u in [-3.0, 3.0]
+  end_bounds
+  cost:
+    running = (v - target_speed)^2 + u_weight * u^2
+    terminal = 5.0 * (v - target_speed)^2
+  end_cost
+  solve:
+    method = dynamic_programming
+    grid = [21, 21]
+    controls = 11
+  end_solve
+end_problem

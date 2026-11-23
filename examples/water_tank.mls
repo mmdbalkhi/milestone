@@ -1,0 +1,36 @@
+problem WaterTank
+  state: h
+  control: u
+
+  parameter:
+    dt = 0.2
+    alpha = 0.1
+    target = 7.0
+    u_weight = 0.05
+
+  dynamics:
+    h' = h + dt * (u - alpha * h)
+  end_dynamics
+
+  initial:
+    h = 2.0
+  end_initial
+
+  horizon: 30
+
+  bounds:
+    h in [0.0, 10.0]
+    u in [0.0, 2.0]
+  end_bounds
+
+  cost:
+    running = (h - target)^2 + u_weight * u^2
+    terminal = 10.0 * (h - target)^2
+  end_cost
+
+  solve:
+    method = dynamic_programming
+    grid = [31]
+    controls = 11
+  end_solve
+end_problem
