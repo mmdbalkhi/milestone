@@ -3,227 +3,156 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Backward DP Optimal Control Lab</title>
-    <!-- OCaml Bridge -->
-    <script src="./bridge_js.js"></script>
+    <title>Milestone | Backward DP</title>
 
-    <!-- CodeMirror -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/one-dark.min.css"
-    />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-    <style>:root{--bg:#f8fafc;--card-bg:#fff;--text:#0f172a;--text-muted:#64748b;--primary:#2563eb;--primary-hover:#1d4ed8;--border:#e2e8f0}*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);padding:24px;font-family:Inter,system-ui,-apple-system,sans-serif;line-height:1.5}.container{grid-template-columns:1fr 1.2fr;gap:24px;max-width:1280px;margin:0 auto;display:grid}@media (max-width:900px){.container{grid-template-columns:1fr}}.card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:24px;box-shadow:0 4px 6px -1px rgba(0,0,0,.05),0 2px 4px -2px rgba(0,0,0,.05)}h1{margin-bottom:8px;font-size:1.5rem;font-weight:700}.subtitle{color:var(--text-muted);border-left:3px solid var(--primary);margin-bottom:24px;padding-left:12px;font-size:.95rem;line-height:1.6}h2{margin-bottom:12px;font-size:1.1rem;font-weight:600}h3{color:var(--text-muted);margin-bottom:12px;font-size:1rem;font-weight:600}.CodeMirror{border:1px solid var(--border);border-radius:8px;height:380px;font-family:JetBrains Mono,Fira Code,ui-monospace,monospace;font-size:13px;line-height:1.6}.CodeMirror-focused{border-color:var(--primary);box-shadow:0 0 0 2px rgba(37,99,235,.1)}.row{flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px;display:flex}button{background:var(--primary);color:#fff;cursor:pointer;border:none;border-radius:8px;align-items:center;gap:8px;padding:10px 20px;font-size:.95rem;font-weight:500;transition:all .2s;display:inline-flex}button:hover{background:var(--primary-hover);transform:translateY(-1px)}button:active{transform:translateY(0)}button:disabled{background:var(--text-muted);cursor:not-allowed;transform:none}button.secondary{color:var(--text);border:1px solid var(--border);background:#fff}button.secondary:hover{background:var(--bg)}.status-bar{white-space:pre-wrap;border-radius:8px;margin-top:16px;padding:12px 16px;font-size:.9rem;font-weight:500;display:none}.status-bar.error{color:#991b1b;background:#fef2f2;border:1px solid #fecaca;display:block}.status-bar.success{color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;display:block}.status-bar.info{color:#1e40af;background:#eff6ff;border:1px solid #bfdbfe;display:block}.summary-strip{border:1px solid var(--border);color:#334155;background:#f8fafc;border-radius:8px;flex-wrap:wrap;gap:24px;margin-top:16px;padding:12px 16px;font-size:.9rem;display:none}.summary-strip span{align-items:center;gap:6px;display:flex}.summary-strip strong{color:var(--text)}.chart-wrap{height:280px;margin-top:16px;position:relative}.spinner{border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;width:16px;height:16px;animation:.8s linear infinite spin}@keyframes spin{to{transform:rotate(360deg)}}.info-section{border-top:1px solid var(--border);flex-direction:column;gap:8px;margin-top:32px;padding-top:20px;display:flex}details{border:1px solid var(--border);cursor:pointer;background:#f8fafc;border-radius:8px;padding:12px 16px;transition:background .2s,border-color .2s}details:hover{background:#f1f5f9}details[open]{border-color:var(--primary);background:#fff}summary{color:var(--text);outline:none;align-items:center;gap:8px;font-size:.9rem;font-weight:600;list-style:none;display:flex}summary::-webkit-details-marker{display:none}summary:before{content:"▶";color:var(--text-muted);font-size:.7rem;transition:transform .2s}details[open] summary:before{transform:rotate(90deg)}.details-content{margin-top:12px;padding-left:8px}.details-content ul{margin:0;padding-left:20px;list-style-type:disc}.details-content ul ul{margin-top:8px;margin-bottom:8px;list-style-type:circle}.details-content li{color:var(--text-muted);margin-bottom:8px;font-size:.85rem;line-height:1.6}.details-content li:last-child{margin-bottom:0}.details-content code{color:#0f172a;background:#e2e8f0;border-radius:4px;padding:2px 5px;font-family:JetBrains Mono,Fira Code,ui-monospace,monospace;font-size:.8rem;font-weight:500}.toast{z-index:1000;white-space:pre-wrap;border-radius:8px;max-width:400px;padding:16px 20px;font-size:.9rem;font-weight:500;transition:transform .3s cubic-bezier(.4,0,.2,1);position:fixed;top:24px;right:24px;transform:translate(120%);box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1)}.toast.show{transform:translate(0)}.toast.error-toast{color:#991b1b;background:#fef2f2;border:1px solid #fecaca}.toast.success-toast{color:#166534;background:#f0fdf4;border:1px solid #bbf7d0}.cm-keyword{color:#c678dd;font-weight:700}.cm-variable{color:#e06c75}.cm-variable-2{color:#e5c07b;font-style:italic}.cm-number{color:#d19a66}.cm-operator{color:#56b6c2}.cm-string{color:#98c379}.cm-comment{color:#5c6370;font-style:italic}</style>
-    <script type="module" crossorigin src="/assets/index-DDvl_kT9.js"></script>
+    <style>:root{--Base:#eff1f5;--Text:#4c4f69;--Sky:#04a5e5;--other:#7287fd;--border:#d0d5dd;--sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;--mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}body{font-family:var(--sans)}pre{color:#d4d4d4;background:#1e1e1e}.tok-variable,.tok-operator{color:#d4d4d4}*{box-sizing:border-box}[hidden]{display:none!important}body{background:var(--Base);min-height:100vh;color:var(--Text);margin:0;font-family:Georgia,serif;font-size:16px;line-height:1.5em}a{color:var(--Sky);text-decoration:none}a:hover{text-decoration:underline}button,select{font:inherit}.app{max-width:1200px;margin:0 auto;padding:20px}.header{border-bottom:1px solid var(--border);justify-content:space-between;align-items:center;margin-bottom:30px;padding-bottom:20px;display:flex}.header h1{margin:0;font-family:sans-serif;font-size:1.5em;font-weight:700;line-height:1em}.workspace{grid-template-columns:1fr 1fr;gap:24px;display:grid}.panel{border:1px solid var(--border);background:#fff;border-radius:3px}.panel-header{border-bottom:1px solid var(--border);background:var(--Base);justify-content:space-between;align-items:center;padding:16px;display:flex}.panel-title{margin:0;font-family:sans-serif;font-size:1.1em;font-weight:700}.toolbar{gap:8px;display:flex}.select,.button{border:1px solid var(--border);height:34px;color:var(--Text);background:#fff;border-radius:3px;padding:0 14px;font-size:14px}.button{cursor:pointer;font-weight:500}.button:hover:not(:disabled){background:var(--Base)}.button:disabled{opacity:.5;cursor:not-allowed}.button.primary{background:var(--Sky);border-color:var(--Sky);color:#fff}.button.primary:hover:not(:disabled){background:#0390c7}.editor-host{border-bottom:1px solid var(--border);height:600px}.cm-editor{height:100%}.cm-scroller{font-family:var(--mono);font-size:13px}.cm-focused{outline:none}.tabs{border-bottom:1px solid var(--border);background:var(--Base);display:flex}.tab{height:42px;color:var(--Text);cursor:pointer;background:0 0;border:0;border-bottom:2px solid transparent;flex:1;font-family:sans-serif;font-weight:500}.tab[aria-selected=true]{color:var(--Sky);border-bottom-color:var(--Sky)}.tab-panel{padding:20px}.status-bar{border:1px solid;border-radius:3px;margin-bottom:16px;padding:12px 16px;font-size:14px;line-height:1.5}.status-bar.success{color:#365314;background:#f7fee7;border-color:#a3e635}.status-bar.error{color:#991b1b;background:#fef2f2;border-color:#fca5a5}.status-bar.info{border-color:var(--Sky);color:#075985;background:#f0f9ff}.empty-state{text-align:center;color:var(--Text);padding:60px 20px;font-size:15px}.summary{gap:16px;margin-bottom:20px;display:flex}.metric{border:1px solid var(--border);background:var(--Base);border-radius:3px;flex:1;padding:14px}.metric-label{color:var(--Text);text-transform:uppercase;opacity:.7;margin-bottom:6px;font-family:sans-serif;font-size:12px;display:block}.metric-value{font-family:var(--mono);font-size:14px;font-weight:600;display:block}.chart-card{border:1px solid var(--border);background:#fff;border-radius:3px;height:280px;margin-bottom:16px;padding:16px}.guide{max-height:600px;overflow:auto}.guide-section{border:1px solid var(--border);background:#fff;border-radius:3px;margin-bottom:20px;padding:16px}.guide-section h3{margin:0 0 12px;font-family:sans-serif;font-size:1.1em;font-weight:700}.guide-section p,.guide-section li{color:var(--Text);font-size:15px;line-height:1.6}.guide-section ul{margin:12px 0 0;padding-left:24px;list-style:outside}code.inline{background:var(--Base);color:var(--other);font-family:var(--mono);border-radius:3px;padding:2px 6px;font-size:13px}.example-card{border:1px solid var(--border);border-radius:3px;margin-top:16px;overflow:hidden}.example-card-header{border-bottom:1px solid var(--border);background:var(--Base);justify-content:space-between;align-items:center;padding:12px 16px;display:flex}.example-card h4{margin:0;font-family:sans-serif;font-size:14px;font-weight:700}pre{color:#4c4f69;background:#f6f7f9;border:1px solid #e6e9ef}.tok-operator{color:#04a5e5}.tok-comment{color:#6a9955;font-style:italic}.tok-keyword{color:#89b4fa;font-weight:600}.tok-number{color:#a6e3a1}.tok-prime{color:#89dceb;font-weight:600}.tok-variable,.tok-operator{color:#cdd6f4}.tok-bracket{color:#f9e2af}.tok-method{color:#94e2d5;font-weight:600}@media (max-width:1024px){.workspace{grid-template-columns:1fr}.editor-host{height:500px}}</style>
+    <script type="module" crossorigin src="/assets/index-BepbJ90I.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DlofsbqE.css">
     <script type="module">import'data:text/javascript,if(!import.meta.resolve)throw Error("import.meta.resolve not supported")';import.meta.url;import("_").catch(()=>1);(async function*(){})().next();window.__vite_is_modern_browser=true</script>
     <script type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
   </head>
+
   <body>
-    <!-- Toast Container -->
-    <div id="error-toast" class="toast error-toast"></div>
-
-    <div class="container">
-      <!-- Left Panel: Editor -->
-      <div class="card">
-        <h1>Backward DP Optimal Control Lab</h1>
-        <p class="subtitle">
-          Finite-horizon discrete-time optimal control via backward dynamic
-          programming and a domain-specific language
-        </p>
-
-        <div class="row" style="margin-top: 0; margin-bottom: 12px">
-          <button class="secondary preset-btn" data-preset="doubleIntegrator">
-            Double Integrator
-          </button>
-          <button class="secondary preset-btn" data-preset="simpleIntegrator">
-            1D Integrator
-          </button>
-          <button class="secondary preset-btn" data-preset="invalidDsl">
-            Invalid DSL (Test)
-          </button>
-        </div>
-
-        <h2>DSL Source</h2>
-        <textarea id="dsl" style="display: none"></textarea>
-
-        <div class="row">
-          <button id="solve">Solve</button>
-          <button id="download-csv" class="secondary" style="display: none">
-            Download CSV
-          </button>
-        </div>
-        <div id="status" class="status-bar"></div>
-      </div>
-
-      <!-- Right Panel: Results -->
-      <div class="card">
-        <h2>Results</h2>
-
-        <!-- Solve Results (Moved to Top) -->
-        <div id="error" class="status-bar error"></div>
-        <div id="ok" class="status-bar success"></div>
-        <div id="summary" class="summary-strip"></div>
-
-        <div id="charts" style="display: none">
-          <div style="display: flex; gap: 16px; flex-wrap: wrap">
-            <div class="chart-wrap" style="flex: 1; min-width: 280px">
-              <canvas id="stateChart"></canvas>
-            </div>
-            <div class="chart-wrap" style="flex: 1; min-width: 280px">
-              <canvas id="controlChart"></canvas>
+    <div class="app">
+      <header class="header">
+        <h1>Milestone | Backward DP</h1>
+        <a
+          href="https://github.com/mmdbalkhi/milestone"
+          target="_blank"
+          rel="noreferrer"
+          >GitHub ↗</a
+        >
+      </header>
+      <p style="margin: 0 0 24px; max-width: 70ch">
+        Deterministic optimal control via backward dynamic programming. Write a
+        small DSL problem, solve it in-browser, and inspect the trajectories.
+      </p>
+      <main class="workspace">
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">DSL Source</h2>
+            <div class="toolbar">
+              <select id="example-select" class="select"></select>
+              <button id="blank-file" class="button" type="button">
+                Blank
+              </button>
+              <button id="solve" class="button primary" type="button">
+                Solve
+              </button>
+              <button
+                id="download-csv"
+                class="button"
+                type="button"
+                hidden
+                disabled
+              >
+                CSV
+              </button>
             </div>
           </div>
-        </div>
 
-        <!-- Collapsible Educational Sections (Moved to Bottom) -->
-        <div class="info-section">
-          <h3>Learn More</h3>
+          <div id="editor" class="editor-host"></div>
+        </section>
 
-          <details>
-            <summary>DSL Quick Guide & Syntax</summary>
-            <div class="details-content">
+        <section class="panel">
+          <div class="tabs" role="tablist">
+            <button
+              id="tab-results"
+              class="tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              data-tab="results"
+            >
+              Results
+            </button>
+            <button
+              id="tab-guide"
+              class="tab"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              data-tab="guide"
+            >
+              Guide
+            </button>
+          </div>
+
+          <div id="panel-results" class="tab-panel" role="tabpanel" hidden>
+            <div id="status" class="status-bar info" hidden></div>
+            <div id="error" hidden></div>
+            <div id="ok" hidden></div>
+            <div id="summary" class="summary" hidden></div>
+
+            <div id="results-empty" class="empty-state">
+              <div>
+                No trajectory yet. Write or load a problem, then press Solve.
+              </div>
+            </div>
+
+            <div id="charts" hidden>
+              <div class="chart-card"><canvas id="stateChart"></canvas></div>
+              <div class="chart-card"><canvas id="controlChart"></canvas></div>
+            </div>
+          </div>
+
+          <div id="panel-guide" class="tab-panel guide" role="tabpanel">
+            <section class="guide-section">
+              <h3>How it works</h3>
+              <p>
+                The solver works backward from
+                <code class="inline">k = N</code> to
+                <code class="inline">k = 0</code>.
+              </p>
+              <p>
+                At each step, it minimizes the running cost plus the
+                interpolated next-step value function across admissible
+                controls.
+              </p>
+              <p>
+                After the value table is computed, a forward rollout starts from
+                the initial state and applies the optimal policy.
+              </p>
+            </section>
+
+            <section class="guide-section">
+              <h3>DSL quick guide</h3>
               <ul>
                 <li>
                   Wrap each problem inside
-                  <code>problem &lt;Name&gt; ... end_problem</code> (<code
-                    >#</code
-                  >
-                  or <code>//</code> for comments).
+                  <code class="inline"
+                    >problem &lt;Name&gt; ... end_problem</code
+                  >.
                 </li>
                 <li>
-                  Currently v1.0 supports 1 or 2 state variables and 1 control
-                  variable.
+                  Use <code class="inline">#</code> or
+                  <code class="inline">//</code> for comments.
                 </li>
                 <li>
-                  Supported operators: <code>+</code>, <code>-</code>,
-                  <code>*</code>, <code>/</code>, unary <code>-</code>,
-                  right-associative <code>^</code>, parentheses, and numeric
-                  literals (no built-in math functions yet).
+                  Currently supports 1 or 2 state variables and exactly 1
+                  control variable.
                 </li>
                 <li>
-                  <strong>Key blocks:</strong>
-                  <ul>
-                    <li>
-                      <code>state:</code> and
-                      <code>control:</code> (comma-separated names)
-                    </li>
-                    <li><code>parameter:</code> (name = &lt;expr&gt; lines)</li>
-                    <li>
-                      <code>dynamics: ... end_dynamics</code> (var' =
-                      &lt;expr&gt; per state)
-                    </li>
-                    <li>
-                      <code>initial: ... end_initial</code> (var = &lt;expr&gt;
-                      per state; <code>target: ... end_target</code> is parsed
-                      in the AST)
-                    </li>
-                    <li><code>horizon:</code> &lt;int&gt; (&gt;= 1)</li>
-                    <li>
-                      <code>bounds: ... end_bounds</code> (var in [lo, hi] with
-                      lo &lt; hi for all state/control variables)
-                    </li>
-                    <li>
-                      <code>cost: ... end_cost</code> (optional
-                      <code>running = &lt;expr&gt;</code> and
-                      <code>terminal = &lt;expr&gt;</code>)
-                    </li>
-                    <li>
-                      <code>solve: ... end_solve</code> (method =
-                      dynamic_programming, grid = [nx] or [nx, ny] with counts
-                      &gt;= 2, and controls = &lt;int&gt; &gt;= 2)
-                    </li>
-                  </ul>
+                  Supported operators: <code class="inline">+</code>,
+                  <code class="inline">-</code>, <code class="inline">*</code>,
+                  <code class="inline">/</code>, unary
+                  <code class="inline">-</code>, right-associative
+                  <code class="inline">^</code>, and parentheses.
                 </li>
               </ul>
-            </div>
-          </details>
+            </section>
 
-          <details>
-            <summary>How Backward DP & Rollout Work</summary>
-            <div class="details-content">
-              <ul>
-                <li>
-                  For a discrete-time optimal control problem over a finite
-                  horizon N, the solver works backward from k = N to k = 0.
-                </li>
-                <li>
-                  It initializes the terminal cost on the discretized state
-                  grid.
-                </li>
-                <li>
-                  At each step, it minimizes the sum of the running cost and the
-                  interpolated next-step value function across admissible
-                  control values.
-                </li>
-                <li>
-                  Once the value table is computed, a forward rollout starts
-                  from x_0 and applies the optimal control at each step to
-                  recover the state and control trajectories.
-                </li>
-              </ul>
-            </div>
-          </details>
-
-          <details>
-            <summary>DSL Syntax & Semantic Validation</summary>
-            <div class="details-content">
-              <ul>
-                <li>
-                  Problems are specified declaratively inside a
-                  <code>problem ... end_problem</code> block.
-                </li>
-                <li>
-                  Sections include: state, control, parameter, dynamics (x' =
-                  ...), initial, horizon, bounds, cost (running and terminal),
-                  and solve settings.
-                </li>
-                <li>
-                  Before running the solver, the compiler checks state/control
-                  counts, interval validity (lo &lt; hi), matching grid
-                  dimensions, and ensures all variables used in expressions are
-                  declared.
-                </li>
-              </ul>
-            </div>
-          </details>
-
-          <details>
-            <summary>Grid Discretization & Curse of Dimensionality</summary>
-            <div class="details-content">
-              <ul>
-                <li>
-                  Solution accuracy depends on state and control grid
-                  resolution, time step dt, and grid interpolation.
-                </li>
-                <li>
-                  Because the number of grid points grows exponentially with
-                  state dimension—known as the
-                  <em>curse of dimensionality</em>—tabular backward dynamic
-                  programming is well suited for low-dimensional systems.
-                </li>
-                <li>
-                  1D and 2D benchmarks (such as the Double Integrator) perform
-                  well, but it becomes computationally expensive in higher
-                  dimensions.
-                </li>
-              </ul>
-            </div>
-          </details>
-        </div>
-      </div>
+            <section class="guide-section">
+              <h3>Examples</h3>
+              <div id="guide-examples"></div>
+            </section>
+          </div>
+        </section>
+      </main>
     </div>
 
     <script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
-    <script nomodule crossorigin id="vite-legacy-polyfill" src="./assets/polyfills-legacy-Dg5MnYUR.js"></script>
-    <script nomodule crossorigin id="vite-legacy-entry" data-src="./assets/index-legacy-PeksrGrF.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+    <script nomodule crossorigin id="vite-legacy-polyfill" src="/assets/polyfills-legacy-CLl3dsCT.js"></script>
+    <script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-0wHlfB4o.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
   </body>
 </html>
